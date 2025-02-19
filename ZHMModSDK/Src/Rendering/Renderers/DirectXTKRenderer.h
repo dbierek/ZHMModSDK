@@ -146,10 +146,6 @@ namespace Rendering::Renderers {
         std::unique_ptr<DirectX::CommonStates> commonStates;
         ScopedD3DRef<ID3D12Resource> m_WhiteTexture;
 
-        std::unique_ptr<DirectX::DescriptorHeap> m_ResourceDescriptors {};
-        std::unique_ptr<DirectX::SpriteFont> m_Font {};
-        std::unique_ptr<DirectX::SpriteBatch> m_SpriteBatch {};
-
         std::optional<size_t> m_DsvIndex = std::nullopt;
     };
 }

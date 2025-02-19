@@ -1253,7 +1253,7 @@ DEFINE_PLUGIN_DETOUR(DebugMod, unsigned long long*, sub_140975120, __int64 a1, Z
             if (s_Key == "Title") {
                 std::string s_Title = ConvertDynamicObjectValueTString(s_Entries->at(i).value);
 
-                m_RepositoryProps.insert(std::make_pair(s_Title, ZRepositoryID(s_Id.c_str())));
+                m_RepositoryProps.push_back(std::make_tuple(ZRepositoryID(s_Id.c_str()), s_Title));
 
                 break;
             }
