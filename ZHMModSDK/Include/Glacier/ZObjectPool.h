@@ -2,15 +2,13 @@
 
 #include "ZPrimitives.h"
 
-class ZMutex
-{
+class ZMutex {
 public:
     uint64_t m_impl[5];
     uint32_t m_nUniqueID;
 };
 
-class ZInfiniteBuffer
-{
+class ZInfiniteBuffer {
 public:
     void* m_pData;
     uint32_t m_nSize;
@@ -18,8 +16,7 @@ public:
     uint32_t m_nMaxSize;
 };
 
-class ZObjectPool
-{
+class ZObjectPool {
 public:
     volatile int64_t m_nFreeListStart;
     uint32_t* m_pData;
@@ -31,16 +28,13 @@ public:
     ZInfiniteBuffer m_Buffer;
     ZMutex m_Mutex;
 
-    [[nodiscard]] bool BelongsToPool(void* p_Object) const
-    {
+    [[nodiscard]] bool BelongsToPool(void* p_Object) const {
         return reinterpret_cast<uintptr_t>(p_Object) - reinterpret_cast<uintptr_t>(m_Buffer.m_pData) < m_Buffer.
-            m_nActualSize;
+                m_nActualSize;
     }
 
-    void Free(void* p_Object)
-    {
-        if (!p_Object)
-        {
+    void Free(void* p_Object) {
+        if (!p_Object) {
             return;
         }
 
@@ -50,8 +44,7 @@ public:
         int64_t v5;
         int64_t v6;
 
-        do
-        {
+        do {
             v5 = InterlockedExchangeAdd64(&m_nFreeListStart, 0);
             v6 = v4 | (v5 >> 32 << 32) + 0x100000000LL;
         }
@@ -64,20 +57,17 @@ static_assert(offsetof(ZObjectPool, m_pData) == 8);
 static_assert(offsetof(ZObjectPool, m_Buffer.m_nActualSize) == 52);
 
 template <class T>
-class TObjectPool
-{
+class TObjectPool {
 public:
     ZObjectPool m_Pool;
     T* m_pStart;
     T* m_pEnd;
 
-    [[nodiscard]] size_t IndexOf(T* p_Object)
-    {
+    [[nodiscard]] size_t IndexOf(T* p_Object) {
         return (reinterpret_cast<uintptr_t>(p_Object) - reinterpret_cast<uintptr_t>(m_pStart)) / sizeof(T);
     }
 
-    [[nodiscard]] bool BelongsToPool(T* p_Object) const
-    {
+    [[nodiscard]] bool BelongsToPool(T* p_Object) const {
         return p_Object >= m_pStart && p_Object < m_pEnd;
     }
 };

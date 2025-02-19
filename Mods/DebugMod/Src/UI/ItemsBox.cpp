@@ -59,7 +59,7 @@ void DebugMod::DrawItemsBox(bool p_HasFocus) {
         for (size_t i = 0; i < s_Actions.size(); i++) {
             const ZHM5Action* s_Action = s_Actions[i];
             const ZHM5Item* s_Item = s_Action->m_Object.QueryInterface<ZHM5Item>();
-            std::string s_Title = std::format("{} {}", s_Item->m_pItemConfigDescriptor->m_sTitle.c_str(), i + 1);
+            std::string s_Title = std::format("{}###{}", s_Item->m_pItemConfigDescriptor->m_sTitle.c_str(), i + 1);
 
             if (ImGui::Selectable(s_Title.c_str(), s_Selected == i)) {
                 s_Selected = i;
@@ -103,7 +103,7 @@ void DebugMod::DrawItemsBox(bool p_HasFocus) {
 
         for (unsigned int i = 0; i < s_Entries->size(); ++i) {
             std::string s_Key = std::format("{}:", s_Entries->operator[](i).sKey.c_str());
-            const IType* s_Type = s_Entries->operator[](i).value.m_pTypeID->typeInfo();
+            const IType* s_Type = s_Entries->operator[](i).value.GetTypeID()->typeInfo();
 
             if (strcmp(s_Type->m_pTypeName, "TArray<ZDynamicObject>") == 0) {
                 s_Key += " [";

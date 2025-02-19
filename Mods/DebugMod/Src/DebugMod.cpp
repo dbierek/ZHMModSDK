@@ -86,12 +86,9 @@ void DebugMod::OnDrawMenu() {
         m_DebugMenuActive = !m_DebugMenuActive;
     }
 
+    // Disabled due to it freezing the game.
     if (ImGui::Button("POSITIONS MENU")) {
         m_PositionsMenuActive = !m_PositionsMenuActive;
-    }
-
-    if (ImGui::Button("ENTITY MENU")) {
-        m_EntityMenuActive = !m_EntityMenuActive;
     }
 
     if (ImGui::Button("PLAYER MENU")) {
@@ -109,10 +106,6 @@ void DebugMod::OnDrawMenu() {
     if (ImGui::Button("NPCs MENU")) {
         m_NPCsMenuActive = !m_NPCsMenuActive;
     }
-
-    if (ImGui::Button("SCENE MENU")) {
-        m_SceneMenuActive = !m_SceneMenuActive;
-    }
 }
 
 void DebugMod::OnDrawUI(bool p_HasFocus) {
@@ -124,7 +117,6 @@ void DebugMod::OnDrawUI(bool p_HasFocus) {
     DrawNPCsBox(p_HasFocus);
     DrawPlayerBox(p_HasFocus);
     DrawPositionBox(p_HasFocus);
-    DrawSceneBox(p_HasFocus);
 
     auto& s_ImgGuiIO = ImGui::GetIO();
 
@@ -563,6 +555,8 @@ auto DebugMod::SpawnNPC(
 }
 
 void DebugMod::LoadRepositoryProps() {
+    m_RepositoryProps.clear();
+
     if (m_RepositoryResource.m_nResourceIndex == -1) {
         const auto s_ID = ResId<"[assembly:/repository/pro.repo].pc_repo">;
 
@@ -579,7 +573,8 @@ void DebugMod::LoadRepositoryProps() {
             const TArray<SDynamicObjectKeyValuePair>* s_Entries = s_DynamicObject->As<TArray<
                 SDynamicObjectKeyValuePair>>();
 
-            std::string s_Id;
+            std::string s_Id, s_Title, s_CommonName, s_Name, s_FinalName;
+            bool s_IsItem = false;
 
             for (size_t i = 0; i < s_Entries->size(); ++i) {
                 std::string s_Key = s_Entries->operator[](i).sKey.c_str();
@@ -587,17 +582,57 @@ void DebugMod::LoadRepositoryProps() {
                 if (s_Key == "ID_") {
                     s_Id = ConvertDynamicObjectValueTString(s_Entries->at(i).value);
                 }
-
-                if (s_Key == "Title") {
-                    std::string s_Title = ConvertDynamicObjectValueTString(s_Entries->at(i).value);
-
-                    m_RepositoryProps.insert(std::make_pair(s_Title, ZRepositoryID(s_Id.c_str())));
-
-                    break;
+                else if (s_Key == "Title") {
+                    s_Title = ConvertDynamicObjectValueTString(s_Entries->at(i).value);
+                }
+                else if (s_Key == "CommonName") {
+                    s_CommonName = ConvertDynamicObjectValueTString(s_Entries->at(i).value);
+                }
+                else if (s_Key == "Name") {
+                    s_Name = ConvertDynamicObjectValueTString(s_Entries->at(i).value);
+                }
+                else if (!s_IsItem) {
+                    s_IsItem = s_Key == "ItemType" ||
+                            s_Key == "IsHitmanSuit" ||
+                            s_Key == "IsWeapon" ||
+                            s_Key == "Items";
                 }
             }
+
+            if (s_Id.empty() || !s_IsItem) {
+                continue;
+            }
+
+            if (s_Title.empty() && s_CommonName.empty() && s_Name.empty()) {
+                s_FinalName = "<unnamed> [" + s_Id + "]";
+            }
+            else if (!s_Title.empty()) {
+                s_FinalName = s_Title + " [" + s_Id + "]";
+            }
+            else if (!s_CommonName.empty()) {
+                s_FinalName = s_CommonName + " [" + s_Id + "]";
+            }
+            else if (!s_Name.empty()) {
+                s_FinalName = s_Name + " [" + s_Id + "]";
+            }
+
+            const auto s_RepoId = ZRepositoryID(s_Id);
+            m_RepositoryProps.push_back(std::make_tuple(s_RepoId, s_FinalName));
         }
     }
+
+    // Sort props based on lower-case name.
+    std::ranges::sort(
+        m_RepositoryProps, [](const auto& a, const auto& b) {
+            auto [_1, s_LowerA] = a;
+            auto [_2, s_LowerB] = b;
+
+            std::ranges::transform(s_LowerA, s_LowerA.begin(), [](unsigned char c) { return std::tolower(c); });
+            std::ranges::transform(s_LowerB, s_LowerB.begin(), [](unsigned char c) { return std::tolower(c); });
+
+            return s_LowerA < s_LowerB;
+        }
+    );
 }
 
 void DebugMod::LoadHashMap() {
@@ -812,7 +847,7 @@ std::string DebugMod::FindNPCEntityNameInBrickBackReferences(
 
 std::string DebugMod::ConvertDynamicObjectValueTString(const ZDynamicObject& p_DynamicObject) {
     std::string s_Result;
-    const IType* s_Type = p_DynamicObject.m_pTypeID->typeInfo();
+    const IType* s_Type = p_DynamicObject.GetTypeID()->typeInfo();
 
     if (strcmp(s_Type->m_pTypeName, "ZString") == 0) {
         const auto s_Value = p_DynamicObject.As<ZString>();

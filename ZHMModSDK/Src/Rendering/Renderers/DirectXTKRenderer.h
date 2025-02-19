@@ -20,19 +20,15 @@
 
 class SGameUpdateEvent;
 
-namespace Rendering::Renderers
-{
-    class DirectXTKRenderer : public IRenderer
-    {
+namespace Rendering::Renderers {
+    class DirectXTKRenderer : public IRenderer {
     private:
-        struct FrameContext
-        {
+        struct FrameContext {
             ScopedD3DRef<ID3D12CommandAllocator> CommandAllocator;
             volatile uint64_t FenceValue = 0;
         };
 
-        enum class Descriptors : int
-        {
+        enum class Descriptors : int {
             FontRegular,
             FontBold,
             Count
@@ -74,8 +70,15 @@ namespace Rendering::Renderers
         bool CreateWhiteTexture();
 
     public:
-        void DrawLine3D(const SVector3& p_From, const SVector3& p_To, const SVector4& p_FromColor, const SVector4& p_ToColor) override;
-        void DrawText2D(const ZString& p_Text, const SVector2& p_Pos, const SVector4& p_Color, float p_Rotation = 0.f, float p_Scale = 1.f, TextAlignment p_Alignment = TextAlignment::Center) override;
+        void DrawLine3D(
+            const SVector3& p_From, const SVector3& p_To, const SVector4& p_FromColor, const SVector4& p_ToColor
+        ) override;
+
+        void DrawText2D(
+            const ZString& p_Text, const SVector2& p_Pos, const SVector4& p_Color, float p_Rotation = 0.f,
+            float p_Scale = 1.f, TextAlignment p_Alignment = TextAlignment::Center
+        ) override;
+
         bool WorldToScreen(const SVector3& p_WorldPos, SVector2& p_Out) override;
         bool ScreenToWorld(const SVector2& p_ScreenPos, SVector3& p_WorldPosOut, SVector3& p_DirectionOut) override;
         void DrawBox3D(const SVector3& p_Min, const SVector3& p_Max, const SVector4& p_Color) override;
@@ -142,6 +145,10 @@ namespace Rendering::Renderers
         ScopedD3DRef<ID3D12PipelineState> pipelineState;
         std::unique_ptr<DirectX::CommonStates> commonStates;
         ScopedD3DRef<ID3D12Resource> m_WhiteTexture;
+
+        std::unique_ptr<DirectX::DescriptorHeap> m_ResourceDescriptors {};
+        std::unique_ptr<DirectX::SpriteFont> m_Font {};
+        std::unique_ptr<DirectX::SpriteBatch> m_SpriteBatch {};
 
         std::optional<size_t> m_DsvIndex = std::nullopt;
     };

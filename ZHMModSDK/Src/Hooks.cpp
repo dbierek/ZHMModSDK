@@ -179,8 +179,8 @@ PATTERN_HOOK(
 );
 
 PATTERN_VTABLE_HOOK(
-    "\x48\x8D\x05\x00\x00\x00\x00\x48\x89\x01\x8B\xDA\x89\x74\x24\x28",
-    "xxx????xxxxxxxxx",
+    "\x48\x8D\x05\x00\x00\x00\x00\x48\x89\x07\x48\x8D\x55\x97",
+    "xxx????xxxxxxx",
     7,
     ZAchievementManagerSimple_OnEventSent,
     void(ZAchievementManagerSimple* th, uint32_t eventIndex, const ZDynamicObject& event)
@@ -376,4 +376,13 @@ PATTERN_HOOK(
     DrawScaleform,
     void(ZRenderContext* ctx, ZRenderTargetView** rtv, uint32_t a3, ZRenderDepthStencilView** dsv, uint32_t a5, bool
         bCaptureOnly)
+);
+
+PATTERN_HOOK(
+    "\x48\x89\x5C\x24\x08\x48\x89\x74\x24\x10\x48\x89\x7C\x24\x18\x44\x89\x4C\x24\x20\x55\x41\x54\x41\x55\x41\x56\x41\x57\x48\x8D\xAC\x24\x20\xFD\xFF\xFF",
+    "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    ZUserChannelContractsProxyBase_GetForPlay2,
+    void(const ZString& id, const ZString& locationId, const ZDynamicObject& extraGameChangedIds, int difficulty,
+        const std::function<void(const ZDynamicObject&)>& onOk, const std::function<void(int)>& onError,
+        ZAsyncContext* ctx, const SHttpRequestBehavior& behavior)
 );

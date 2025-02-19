@@ -47,6 +47,7 @@
 #include <limits.h>
 
 #include "Glacier/ZPlayerRegistry.h"
+#include "Glacier/ZServerProxyRoute.h"
 
 // Needed for TaskDialogIndirect
 #pragma comment(linker,"\"/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
@@ -68,7 +69,7 @@ ZHMSDK_API IModSDK* SDK() {
 }
 
 extern "C" ZHMSDK_API const char* SDKVersion() {
-    return "3.0.0";
+    return "3.1.1";
 }
 
 ModSDK* ModSDK::g_Instance = nullptr;
@@ -453,7 +454,7 @@ void ModSDK::SkipVersionUpdate(const std::string& p_Version) {
     );
 }
 
-void ModSDK::CheckForUpdates() {
+void ModSDK::CheckForUpdates() const {
     // Try to get latest version from GitHub.
     std::pair<uint32_t, std::string> s_VersionCheckResult;
 
@@ -533,7 +534,7 @@ void OnConsoleCommand(void* context, TArray<ZString> p_Args) {
         else if (p_Args[0] == "config") {
             ZConfigCommand* s_Command = ZConfigCommand::Get(p_Args[1]);
 
-            if (s_Command == 0)
+            if (!s_Command)
                 return Logger::Error("[ZConfigCommand] Invalid command.");
 
             switch (s_Command->GetType()) {
@@ -559,7 +560,7 @@ void OnConsoleCommand(void* context, TArray<ZString> p_Args) {
         if (p_Args[0] == "config") {
             ZConfigCommand* s_Command = ZConfigCommand::Get(p_Args[1]);
 
-            if (s_Command == 0)
+            if (!s_Command)
                 return Logger::Info("[ZConfigCommand] Invalid command.");
 
             // Now we validate the input, we technically don't need to do this as it'll be done by the engine function
@@ -614,7 +615,7 @@ void OnConsoleCommand(void* context, TArray<ZString> p_Args) {
             }
 
             Functions::ZConfigCommand_ExecuteCommand->Call(p_Args[1].c_str(), p_Args[2].c_str());
-            Logger::Info("[ZConfigCommand] Set \"{}\" to \"{}\"", p_Args[1], p_Args[2]);
+            Logger::Info(R"([ZConfigCommand] Set "{}" to "{}")", p_Args[1], p_Args[2]);
         }
     }
 }
@@ -632,6 +633,10 @@ bool ModSDK::Startup() {
     Hooks::DrawScaleform->AddDetour(this, &ModSDK::DrawScaleform);
     Hooks::ZEntitySceneContext_LoadScene->AddDetour(this, &ModSDK::OnLoadScene);
     Hooks::ZEntitySceneContext_ClearScene->AddDetour(this, &ModSDK::OnClearScene);
+
+    Hooks::ZUserChannelContractsProxyBase_GetForPlay2->AddDetour(
+        this, &ModSDK::ZUserChannelContractsProxyBase_GetForPlay2
+    );
 
     m_D3D12Hooks->Startup();
 
@@ -665,7 +670,7 @@ bool ModSDK::Startup() {
     return true;
 }
 
-void ModSDK::ThreadedStartup() {
+void ModSDK::ThreadedStartup() const {
     m_ModLoader->LockRead();
 
     for (const auto& s_Mod : m_ModLoader->GetLoadedMods()) {
@@ -680,7 +685,7 @@ void ModSDK::ThreadedStartup() {
         OnEngineInit();
 }
 
-void ModSDK::OnDrawMenu() {
+void ModSDK::OnDrawMenu() const {
     m_ModLoader->LockRead();
 
     for (auto& s_Mod : m_ModLoader->GetLoadedMods()) {
@@ -690,7 +695,7 @@ void ModSDK::OnDrawMenu() {
     m_ModLoader->UnlockRead();
 }
 
-void ModSDK::OnDrawUI(bool p_HasFocus) {
+void ModSDK::OnDrawUI(bool p_HasFocus) const {
     m_UIConsole->Draw(p_HasFocus);
     m_UIMainMenu->Draw(p_HasFocus);
     m_UIModSelector->Draw(p_HasFocus);
@@ -703,7 +708,7 @@ void ModSDK::OnDrawUI(bool p_HasFocus) {
     m_ModLoader->UnlockRead();
 }
 
-void ModSDK::OnDraw3D() {
+void ModSDK::OnDraw3D() const {
     m_ModLoader->LockRead();
 
     for (auto& s_Mod : m_ModLoader->GetLoadedMods())
@@ -758,13 +763,164 @@ void ModSDK::OnModLoaded(const std::string& p_Name, IPluginInterface* p_Mod, boo
 
 void ModSDK::OnModUnloaded(const std::string& p_Name) {}
 
-void ModSDK::OnEngineInit() {
+void ModSDK::OnEngineInit() const {
     Logger::Debug("Engine was initialized.");
 
     if (m_UiEnabled) {
         m_DirectXTKRenderer->OnEngineInit();
         m_ImguiRenderer->OnEngineInit();
     }
+
+    /*if (Globals::ZProfileServerPageProxyBase_m_aRouteMap) {
+        for (auto s_Pair : *Globals::ZProfileServerPageProxyBase_m_aRouteMap) {
+            Logger::Debug("Route map: {} -> {}", s_Pair->first.c_str(), s_Pair->second->m_sUrl);
+
+            if (s_Pair->first == "hub") {
+                const auto s_OriginalFn = s_Pair->second->m_fnExecute;
+
+                s_Pair->second->m_fnExecute = [=](
+                    const ZDynamicObject& p_Request,
+                    std::function<void(const ZDynamicObject&)> p_OkCb,
+                    std::function<void(int)> p_ErrorCb,
+                    ZAsyncContext* p_AsyncContext,
+                    const SHttpRequestBehavior& p_Behavior
+                ) {
+                            const auto s_NewOkCb = [=](const ZDynamicObject& p_Response) {
+                                ZDynamicObject s_NewResponse = p_Response;
+
+                                // Insert custom tile to dashboard.
+                                auto s_NewDestination = ZDynamicObject::Object();
+                                s_NewDestination["Location"] = ZDynamicObject::Object();
+                                s_NewDestination["Location"]["Id"] = "CUSTOM_MISSIONS"_zs;
+                                s_NewDestination["Location"]["Guid"] = "a8b5e0a0-e7d7-4c0f-a5a1-b2d5c1e5d1d2"_zs;
+                                s_NewDestination["Location"]["Type"] = "location"_zs;
+                                s_NewDestination["Location"]["Subtype"] = "location"_zs;
+                                s_NewDestination["Location"]["RMTPrice"] = -1.0f;
+                                s_NewDestination["Location"]["GamePrice"] = -1.0f;
+                                s_NewDestination["Location"]["IsPurchasable"] = false;
+                                s_NewDestination["Location"]["IsPublished"] = true;
+                                s_NewDestination["Location"]["IsDroppable"] = false;
+                                s_NewDestination["Location"]["Capabilities"] = ZDynamicObject::Array();
+                                s_NewDestination["Location"]["Qualities"] = ZDynamicObject::Object();
+                                s_NewDestination["Location"]["Properties"] = ZDynamicObject::Object();
+                                s_NewDestination["Location"]["Properties"]["Quality"] = ""_zs;
+
+                                s_NewDestination["Location"]["Properties"]["Icon"] =
+                                        "images/locations/LOCATION_siberia/tile.jpg"_zs;
+
+                                s_NewDestination["Location"]["Properties"]["Background"] =
+                                        "images/locations/LOCATION_siberia/background.jpg"_zs;
+
+                                s_NewDestination["Location"]["Properties"]["DlcImage"] =
+                                        "images/livetile/dlc/tile_hitman3.jpg"_zs;
+
+                                s_NewDestination["Location"]["Properties"]["DlcName"] =
+                                        "GAME_STORE_METADATA_S3_GAME_TITLE"_zs;
+
+                                s_NewDestination["Location"]["Properties"]["Season"] = 1.0f;
+                                s_NewDestination["Location"]["Properties"]["Order"] = 10.0f;
+
+                                s_NewDestination["Location"]["Properties"]["ProgressionKey"] =
+                                        "LOCATION_ICA_FACILITY"_zs;
+
+                                s_NewDestination["Location"]["Properties"]["HideProgression"] = true;
+                                s_NewDestination["Location"]["Properties"]["RequiredResources"] =
+                                        ZDynamicObject::Array();
+
+
+                                s_NewResponse["data"]["DestinationsData"].Insert(0, s_NewDestination);
+
+                                // Print the response.
+                                ZString s_SerializedResponse;
+                                Functions::ZDynamicObject_ToString->Call(
+                                    &s_NewResponse, &s_SerializedResponse
+                                );
+
+                                Logger::Debug(
+                                    "[{}] response: {}", s_Pair->first.c_str(), s_SerializedResponse.c_str()
+                                );
+
+                                p_OkCb(s_NewResponse);
+                            };
+
+                            s_OriginalFn(
+                                p_Request,
+                                s_NewOkCb,
+                                p_ErrorCb,
+                                p_AsyncContext,
+                                p_Behavior
+                            );
+                        };
+            }
+
+            if (s_Pair->first == "destination") {
+                const auto s_OriginalFn = s_Pair->second->m_fnExecute;
+                s_Pair->second->m_fnExecute = [=](
+                    const ZDynamicObject& p_Request,
+                    std::function<void(const ZDynamicObject&)> p_OkCb,
+                    std::function<void(int)> p_ErrorCb,
+                    ZAsyncContext* p_AsyncContext,
+                    const SHttpRequestBehavior& p_Behavior
+                ) {
+                            ZString s_SerializedRequest;
+                            Functions::ZDynamicObject_ToString->Call(
+                                const_cast<ZDynamicObject*>(&p_Request), &s_SerializedRequest
+                            );
+
+                            Logger::Debug(
+                                "[{}] request: {}", s_Pair->first.c_str(), s_SerializedRequest.c_str()
+                            );
+
+                            ZString s_LocationId;
+                            if (p_Request.Get("locationId", s_LocationId)) {
+                                Logger::Debug("Location ID: {}", s_LocationId.c_str());
+                            }
+                            else {
+                                Logger::Debug("No location ID");
+                            }
+
+                            const auto s_NewOkCb = [=](const ZDynamicObject& p_Response) {
+                                ZDynamicObject s_NewResponse = p_Response;
+
+                                for (auto& s_MissionsData : s_NewResponse["data"]["MissionData"][
+                                         "SubLocationMissionsData"]) {
+                                    for (auto& s_Mission : s_MissionsData["Missions"]) {
+                                        s_Mission["UserCentricContract"]["Contract"]["Metadata"]["Title"] =
+                                                "El em ay oh"_zs;
+                                    }
+                                }
+
+                                Logger::Debug("Serializing response");
+
+                                ZString s_SerializedResponse;
+                                Functions::ZDynamicObject_ToString->Call(
+                                    &s_NewResponse, &s_SerializedResponse
+                                );
+
+                                Logger::Debug(
+                                    "[{}] response: {}", s_Pair->first.c_str(), s_SerializedResponse.c_str()
+                                );
+
+                                p_OkCb(s_NewResponse);
+                            };
+
+                            const auto s_NewErrorCb = [=](int p_ResponseCode) {
+                                Logger::Debug("[{}] error code: {}", s_Pair->first.c_str(), p_ResponseCode);
+
+                                p_ErrorCb(p_ResponseCode);
+                            };
+
+                            s_OriginalFn(
+                                p_Request,
+                                s_NewOkCb,
+                                s_NewErrorCb,
+                                p_AsyncContext,
+                                p_Behavior
+                            );
+                        };
+            }
+        }
+    }*/
 
     m_ModLoader->LockRead();
 
@@ -1228,7 +1384,7 @@ DEFINE_DETOUR_WITH_CONTEXT(ModSDK, EOS_PlatformHandle*, EOS_Platform_Create, EOS
     Options->Flags |= EOS_PF_LOADING_IN_EDITOR | EOS_PF_DISABLE_OVERLAY;
     #endif
 
-    return HookResult<EOS_PlatformHandle*>(HookAction::Continue());
+    return {HookAction::Continue()};
 }
 
 void ModSDK::UpdateSdkIni(std::function<void(mINI::INIMap<std::string>&)> p_Callback) {
@@ -1268,35 +1424,58 @@ DEFINE_DETOUR_WITH_CONTEXT(
     ModSDK, void, DrawScaleform, ZRenderContext* ctx, ZRenderTargetView** rtv, uint32_t a3,
     ZRenderDepthStencilView** dsv,
     uint32_t a5, bool bCaptureOnly
-)
-{
-    if (dsv && *dsv && m_DirectXTKRenderer)
-    {
+) {
+    if (dsv && *dsv && m_DirectXTKRenderer) {
         // TODO: Re-enable once we have proper functions for depth-supported drawing.
         m_DirectXTKRenderer->SetDsvIndex((*Globals::D3D12ObjectPools)->DepthStencilViews.IndexOf(*dsv) + 1);
     }
 
-    return { HookAction::Continue() };
+    return {HookAction::Continue()};
 }
 
 DEFINE_DETOUR_WITH_CONTEXT(
     ModSDK, void, OnLoadScene, ZEntitySceneContext* th, ZSceneData& p_SceneData
-)
-{
-    if (m_DirectXTKRenderer)
-    {
+) {
+    if (m_DirectXTKRenderer) {
         m_DirectXTKRenderer->ClearDsvIndex();
     }
 
-    return { HookAction::Continue() };
+    return {HookAction::Continue()};
 }
 
-DEFINE_DETOUR_WITH_CONTEXT(ModSDK, void, OnClearScene, ZEntitySceneContext* th, bool forReload)
-{
-    if (m_DirectXTKRenderer)
-    {
+DEFINE_DETOUR_WITH_CONTEXT(ModSDK, void, OnClearScene, ZEntitySceneContext* th, bool forReload) {
+    if (m_DirectXTKRenderer) {
         m_DirectXTKRenderer->ClearDsvIndex();
     }
 
-    return { HookAction::Continue() };
+    return {HookAction::Continue()};
+}
+
+DEFINE_DETOUR_WITH_CONTEXT(
+    ModSDK, void, ZUserChannelContractsProxyBase_GetForPlay2, const ZString& id, const ZString& locationId,
+    const ZDynamicObject& extraGameChangedIds, int difficulty, const std::function<void(const ZDynamicObject&)>& onOk,
+    const std::function<void(int)>& onError, ZAsyncContext* ctx, const SHttpRequestBehavior& behavior
+) {
+    /*Logger::Debug("GetForPlay2 called for id '{}' and location '{}'", id.c_str(), locationId.c_str());
+
+    auto s_NewOkCb = [=](const ZDynamicObject& p_Response) {
+        ZString s_SerializedResponse;
+        Functions::ZDynamicObject_ToString->Call(
+            const_cast<ZDynamicObject*>(&p_Response), &s_SerializedResponse
+        );
+
+        Logger::Debug(
+            "[GetForPlay2] response: {}", s_SerializedResponse.c_str()
+        );
+
+        onOk(p_Response);
+    };
+
+    p_Hook->CallOriginal(
+        id, locationId, extraGameChangedIds, difficulty, s_NewOkCb, onError, ctx, behavior
+    );*/
+
+    p_Hook->CallOriginal(id, locationId, extraGameChangedIds, difficulty, onOk, onError, ctx, behavior);
+
+    return HookResult<void>(HookAction::Return());
 }

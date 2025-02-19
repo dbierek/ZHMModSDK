@@ -45,7 +45,7 @@ public:
     ~ModSDK();
 
     bool Startup();
-    void ThreadedStartup();
+    void ThreadedStartup() const;
 
     uintptr_t GetModuleBase() const { return m_ModuleBase; }
     uint32_t GetSizeOfCode() const { return m_SizeOfCode; }
@@ -53,19 +53,19 @@ public:
 
 private:
     void LoadConfiguration();
-    std::pair<uint32_t, std::string> RequestLatestVersion();
-    void ShowVersionNotice(const std::string& p_Version);
+    static std::pair<uint32_t, std::string> RequestLatestVersion();
+    static void ShowVersionNotice(const std::string& p_Version);
     void SkipVersionUpdate(const std::string& p_Version);
-    void CheckForUpdates();
+    void CheckForUpdates() const;
 
 public:
-    void OnEngineInit();
     void OnModLoaded(const std::string& p_Name, IPluginInterface* p_Mod, bool p_LiveLoad);
     void OnModUnloaded(const std::string& p_Name);
-    void OnDrawUI(bool p_HasFocus);
-    void OnDraw3D();
+    void OnEngineInit() const;
+    void OnDrawUI(bool p_HasFocus) const;
+    void OnDraw3D() const;
+    void OnDrawMenu() const;
     void OnDepthDraw3D();
-    void OnDrawMenu();
 
 public:
     void SetSwapChain(Rendering::D3D12SwapChain* p_SwapChain);
@@ -170,6 +170,13 @@ private:
     DECLARE_DETOUR_WITH_CONTEXT(
         ModSDK, void, DrawScaleform, ZRenderContext* ctx, ZRenderTargetView** rtv, uint32_t a3,
         ZRenderDepthStencilView** dsv, uint32_t a5, bool bCaptureOnly
+    );
+
+    DECLARE_DETOUR_WITH_CONTEXT(
+        ModSDK, void, ZUserChannelContractsProxyBase_GetForPlay2, const ZString& id, const ZString& locationId,
+        const ZDynamicObject& extraGameChangedIds, int difficulty,
+        const std::function<void(const ZDynamicObject&)>& onOk, const std::function<void(int)>& onError,
+        ZAsyncContext* ctx, const SHttpRequestBehavior& behavior
     );
 
     bool PatchCodeInternal(

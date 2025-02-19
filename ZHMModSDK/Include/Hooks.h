@@ -12,6 +12,7 @@
 #include <Glacier/THashMap.h>
 #include <Glacier/ZDelegate.h>
 
+class ZRenderDepthStencilView;
 class ZRuntimeResourceID;
 class ZActor;
 class ZComponentCreateInfo;
@@ -66,6 +67,8 @@ class TEntityRef;
 struct EOS_PlatformHandle;
 struct EOS_Platform_Options;
 class ZRenderTargetView;
+class ZAsyncContext;
+struct SHttpRequestBehavior;
 class ZRenderDepthStencilView;
 
 class ZHMSDK_API Hooks {
@@ -172,11 +175,16 @@ public:
     //static Hook<void(ZRenderMaterialEntityFactory* th, ZEntityRef entity, void* a3)>* ZAudioSwitchBlueprintFactory_DestroyEntity;
     //static Hook<void(ZRenderMaterialEntityFactory* th, ZEntityRef entity, void* a3)>* ZAudioStateBlueprintFactory_DestroyEntity;
     //static Hook<void(ZRenderMaterialEntityFactory* th, ZEntityRef entity, void* a3)>* ZAspectEntityBlueprintFactory_DestroyEntity;
-
-    static Hook<unsigned long long* (__int64 a1, ZDynamicObject* a2)>* sub_140975120;
-
     static Hook<void(
         ZRenderContext* ctx, ZRenderTargetView** rtv, uint32_t a3, ZRenderDepthStencilView** dsv, uint32_t a5,
         bool bCaptureOnly
-        )>* DrawScaleform;
+    )>* DrawScaleform;
+
+    static Hook<void(
+        const ZString& id, const ZString& locationId, const ZDynamicObject& extraGameChangedIds, int difficulty,
+        const std::function<void(const ZDynamicObject&)>& onOk, const std::function<void(int)>& onError,
+        ZAsyncContext* ctx, const SHttpRequestBehavior& behavior
+    )>* ZUserChannelContractsProxyBase_GetForPlay2;
+
+    static Hook<unsigned long long* (__int64 a1, ZDynamicObject* a2)>* sub_140975120;
 };
