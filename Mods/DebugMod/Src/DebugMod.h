@@ -101,6 +101,8 @@ private:
     DECLARE_PLUGIN_DETOUR(DebugMod, void, OnLoadScene, ZEntitySceneContext*, ZSceneData&);
     DECLARE_PLUGIN_DETOUR(DebugMod, void, OnClearScene, ZEntitySceneContext* th, bool forReload);
 
+    DECLARE_PLUGIN_DETOUR(DebugMod, unsigned long long*, sub_140975120, __int64 a1, ZDynamicObject* a2);
+
 private:
     bool m_DebugMenuActive = false;
     bool m_PositionsMenuActive = false;

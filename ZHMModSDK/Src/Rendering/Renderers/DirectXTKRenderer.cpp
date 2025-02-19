@@ -76,7 +76,7 @@ void DirectXTKRenderer::Draw() {
     m_CurrentPrimitiveType = PrimitiveType::Triangle;
 
     //m_CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    m_TextEffect->Apply(m_CommandList);
+    //m_TextEffect->Apply(m_CommandList);
     //m_LineEffect->Apply(m_CommandList);
     m_TriangleEffect->Apply(m_CommandList);
 
@@ -114,7 +114,7 @@ void DirectXTKRenderer::DepthDraw() {
     const CD3DX12_CPU_DESCRIPTOR_HANDLE s_RtvDescriptor(s_RtvHandle, s_BackBufferIndex, m_RtvDescriptorSize);
 
     const auto s_DsvHandle = Globals::RenderManager->m_pDevice->m_pDescriptorHeapDSV->GetCPUDescriptorHandleForHeapStart();
-    const CD3DX12_CPU_DESCRIPTOR_HANDLE s_DsvDescriptor(s_DsvHandle, 17, m_DsvDescriptorSize);
+    const CD3DX12_CPU_DESCRIPTOR_HANDLE s_DsvDescriptor(s_DsvHandle, *m_DsvIndex, m_DsvDescriptorSize);
 
     m_CommandList->OMSetRenderTargets(1, &s_RtvDescriptor, false, &s_DsvDescriptor);
 
@@ -242,12 +242,12 @@ void DirectXTKRenderer::OnPresent(IDXGISwapChain3* p_SwapChain) {
 
     //TEntityRef<ZHitman5> s_LocalHitman = SDK()->GetLocalPlayer();
 
-    //if (s_LocalHitman)
-    //{
-    //    DepthDraw();
-    //}
+    if (m_DsvIndex.has_value())
+    {
+        DepthDraw();
+    }
 
-    //Draw();
+    Draw();
 
     const D3D12_RESOURCE_BARRIER s_PresentBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
         m_BackBuffers[s_BackBufferIndex],

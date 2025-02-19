@@ -59,6 +59,8 @@ namespace Rendering::Renderers
         void SetCommandQueue(ID3D12CommandQueue* p_CommandQueue);
         void OnReset();
         void PostReset();
+        void SetDsvIndex(size_t p_Index) { m_DsvIndex = p_Index; }
+        void ClearDsvIndex() { m_DsvIndex = std::nullopt; }
 
     private:
         void OnFrameUpdate(const SGameUpdateEvent& p_UpdateEvent);
@@ -140,5 +142,7 @@ namespace Rendering::Renderers
         ScopedD3DRef<ID3D12PipelineState> pipelineState;
         std::unique_ptr<DirectX::CommonStates> commonStates;
         ScopedD3DRef<ID3D12Resource> m_WhiteTexture;
+
+        std::optional<size_t> m_DsvIndex = std::nullopt;
     };
 }

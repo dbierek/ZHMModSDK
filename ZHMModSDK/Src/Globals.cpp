@@ -246,3 +246,10 @@ PATTERN_RELATIVE_GLOBAL(
     3,
     SReasoningGrid**, ActiveGrid
 );
+
+PATTERN_RELATIVE_GLOBAL(
+    "\x48\x8B\x0D\x00\x00\x00\x00\x4C\x8D\xB5\x88\x05\x00\x00",
+    "xxx????xxxxxxx",
+    3,
+    SD3D12ObjectPools**, D3D12ObjectPools
+);

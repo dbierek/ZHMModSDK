@@ -51,6 +51,8 @@ DebugMod::~DebugMod() {
 
 void DebugMod::Init() {
     Hooks::ZEntitySceneContext_ClearScene->AddDetour(this, &DebugMod::OnClearScene);
+
+    Hooks::sub_140975120->AddDetour(this, &DebugMod::sub_140975120);
 }
 
 void DebugMod::OnEngineInitialized() {
@@ -1193,6 +1195,37 @@ DEFINE_PLUGIN_DETOUR(DebugMod, void, OnClearScene, ZEntitySceneContext* th, bool
     m_GlobalOutfitKit = nullptr;
 
     return HookResult<void>(HookAction::Continue());
+}
+
+DEFINE_PLUGIN_DETOUR(DebugMod, unsigned long long*, sub_140975120, __int64 a1, ZDynamicObject* loadoutData) {
+    TArray<ZDynamicObject>* s_Entries = loadoutData->As<TArray<ZDynamicObject>>();
+    size_t size = s_Entries->size();
+    for (size_t i = 0; i < s_Entries->size(); ++i)
+    {
+        ZDynamicObject* dynamicObject = &(*s_Entries)[i];
+        const TArray<SDynamicObjectKeyValuePair>* s_Entries = dynamicObject->As<TArray<
+            SDynamicObjectKeyValuePair>>();
+
+        std::string s_Id;
+
+        for (size_t i = 0; i < s_Entries->size(); ++i) {
+            std::string s_Key = s_Entries->operator[](i).sKey.c_str();
+            std::string value = ConvertDynamicObjectValueTString(s_Entries->at(i).value);
+            if (s_Key == "ID_") {
+                s_Id = ConvertDynamicObjectValueTString(s_Entries->at(i).value);
+            }
+
+            if (s_Key == "Title") {
+                std::string s_Title = ConvertDynamicObjectValueTString(s_Entries->at(i).value);
+
+                m_RepositoryProps.insert(std::make_pair(s_Title, ZRepositoryID(s_Id.c_str())));
+
+                break;
+            }
+        }
+    }
+
+    return HookResult<unsigned long long*>(HookAction::Continue());
 }
 
 DEFINE_ZHM_PLUGIN(DebugMod);

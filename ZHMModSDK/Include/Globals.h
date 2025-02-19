@@ -35,6 +35,7 @@ struct SReasoningGrid;
 class ZGridManager;
 class ZHM5GridManager;
 class ZPathfinder;
+struct SD3D12ObjectPools;
 
 namespace bfx
 {
@@ -78,4 +79,5 @@ public:
     static int* InputActionManager_Seq;
     static TArray<TEntityRef<ZSelectionForFreeCameraEditorStyleEntity>>* Selections;
     static SReasoningGrid** ActiveGrid;
+    static SD3D12ObjectPools** D3D12ObjectPools;
 };

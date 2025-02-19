@@ -5,6 +5,7 @@
 
 #include "ZMath.h"
 #include "Reflection.h"
+#include "ZObjectPool.h"
 
 class ZEntityRef;
 
@@ -152,6 +153,18 @@ public:
 };
 
 class ZRenderTargetView;
+class ZRenderUnorderedAccessView;
+
+class ZRenderDepthStencilView
+{
+public:
+    virtual ~ZRenderDepthStencilView() = 0;
+
+public:
+    PAD(0x30);
+};
+
+static_assert(sizeof(ZRenderDepthStencilView) == 56);
 
 class ZRenderShaderResourceView {
 public:
@@ -166,6 +179,15 @@ public:
 
 static_assert(offsetof(ZRenderShaderResourceView, m_nHeapDescriptorIndex) == 0x14);
 static_assert(offsetof(ZRenderShaderResourceView, m_Handle) == 0x38);
+
+struct SD3D12ObjectPools
+{
+    PAD(0x5b0);
+    TObjectPool<ZRenderTargetView> RenderTargetViews;
+    TObjectPool<ZRenderDepthStencilView> DepthStencilViews;
+    TObjectPool<ZRenderShaderResourceView> ShaderResourceViews;
+    TObjectPool<ZRenderUnorderedAccessView> UnorderedAccessViews;
+};
 
 class ZRenderDestination : public IRenderDestination {
 public:

@@ -629,6 +629,9 @@ bool ModSDK::Startup() {
     // Notify all loaded mods that the engine has intialized once it has.
     Hooks::Engine_Init->AddDetour(this, &ModSDK::Engine_Init);
     Hooks::EOS_Platform_Create->AddDetour(this, &ModSDK::EOS_Platform_Create);
+    Hooks::DrawScaleform->AddDetour(this, &ModSDK::DrawScaleform);
+    Hooks::ZEntitySceneContext_LoadScene->AddDetour(this, &ModSDK::OnLoadScene);
+    Hooks::ZEntitySceneContext_ClearScene->AddDetour(this, &ModSDK::OnClearScene);
 
     m_D3D12Hooks->Startup();
 
@@ -1153,7 +1156,7 @@ TEntityRef<ZHitman5> ModSDK::GetLocalPlayer() {
     SNetPlayerData* s_PlayerData = nullptr;
 
     for (int i = 0; i < _countof(Globals::PlayerRegistry->m_pPlayerData); ++i) {
-        if (!Globals::PlayerRegistry->m_pPlayerData[i]->m_Controller.m_pNetPlayer) {
+        if (Globals::PlayerRegistry->m_pPlayerData[i] && !Globals::PlayerRegistry->m_pPlayerData[i]->m_Controller.m_pNetPlayer) {
             s_PlayerData = Globals::PlayerRegistry->m_pPlayerData[i];
             break;
         }
@@ -1259,4 +1262,41 @@ void ModSDK::UpdateSdkIni(std::function<void(mINI::INIMap<std::string>&)> p_Call
     s_Ini.set("sdk", s_SdkMap);
 
     s_File.generate(s_Ini, true);
+}
+
+DEFINE_DETOUR_WITH_CONTEXT(
+    ModSDK, void, DrawScaleform, ZRenderContext* ctx, ZRenderTargetView** rtv, uint32_t a3,
+    ZRenderDepthStencilView** dsv,
+    uint32_t a5, bool bCaptureOnly
+)
+{
+    if (dsv && *dsv && m_DirectXTKRenderer)
+    {
+        // TODO: Re-enable once we have proper functions for depth-supported drawing.
+        m_DirectXTKRenderer->SetDsvIndex((*Globals::D3D12ObjectPools)->DepthStencilViews.IndexOf(*dsv) + 1);
+    }
+
+    return { HookAction::Continue() };
+}
+
+DEFINE_DETOUR_WITH_CONTEXT(
+    ModSDK, void, OnLoadScene, ZEntitySceneContext* th, ZSceneData& p_SceneData
+)
+{
+    if (m_DirectXTKRenderer)
+    {
+        m_DirectXTKRenderer->ClearDsvIndex();
+    }
+
+    return { HookAction::Continue() };
+}
+
+DEFINE_DETOUR_WITH_CONTEXT(ModSDK, void, OnClearScene, ZEntitySceneContext* th, bool forReload)
+{
+    if (m_DirectXTKRenderer)
+    {
+        m_DirectXTKRenderer->ClearDsvIndex();
+    }
+
+    return { HookAction::Continue() };
 }
