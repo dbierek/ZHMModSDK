@@ -557,49 +557,50 @@ void Editor::QueueTask(std::function<void()> p_Task) {
 }
 
 std::vector<Editor::PinInfo> Editor::GetPins(ZEntityRef p_EntityRef, bool outputPins) {
-    std::vector<PinInfo> result;
-    std::unordered_set<std::string> seen;
+    std::vector<PinInfo> s_Result;
 
     if (!p_EntityRef || !p_EntityRef->GetType()->m_pInterfaceData) {
-        return result;
+        return s_Result;
     }
 
-    TArray<SInterfaceData>* interfaces = p_EntityRef->GetType()->m_pInterfaceData;
+    TArray<SInterfaceData>* s_Interfaces = p_EntityRef->GetType()->m_pInterfaceData;
 
-    for (size_t i = 0; i < interfaces->size(); ++i)
+    std::unordered_set<std::string> s_PinNames;
+
+    for (const SInterfaceData& s_InterfaceData : *s_Interfaces)
     {
-        const SInterfaceData& interfaceData = (*interfaces)[i];
-        const IType* s_TypeInfo = interfaceData.m_Type->GetTypeInfo();
+        const IType* s_TypeInfo = s_InterfaceData.m_Type->GetTypeInfo();
 
         if (!s_TypeInfo) {
             continue;
         }
 
-        const std::string className = Util::StringUtils::ToLowerCase(s_TypeInfo->pszTypeName);
+        const std::string s_ClassName = Util::StringUtils::ToLowerCase(s_TypeInfo->pszTypeName);
 
-        auto it = m_ClassToInputAndOutputPins.find(className);
+        auto s_Iterator = m_ClassToInputAndOutputPins.find(s_ClassName);
 
-        if (it == m_ClassToInputAndOutputPins.end()) {
+        if (s_Iterator == m_ClassToInputAndOutputPins.end()) {
             continue;
         }
 
-        const auto& pins = outputPins ? it->second.outputPins : it->second.inputPins;
+        const auto& s_Pins = outputPins ? s_Iterator->second.outputPins : s_Iterator->second.inputPins;
 
-        for (const auto& pin : pins)
-        {
-            if (seen.insert(pin.name).second) {
-                result.push_back(pin);
+        for (const auto& s_Pin : s_Pins) {
+            if (s_PinNames.insert(s_Pin.name).second) {
+                s_Result.push_back(s_Pin);
             }
         }
     }
 
-    std::sort(result.begin(), result.end(),
-        [](const PinInfo& a, const PinInfo& b)
-        {
-            return a.name < b.name;
-        });
+    std::sort(
+        s_Result.begin(),
+        s_Result.end(),
+        [](const PinInfo& p_A, const PinInfo& p_B) {
+            return p_A.name < p_B.name;
+        }
+    );
 
-    return result;
+    return s_Result;
 }
 
 std::map<std::string, Editor::PinLists> Editor::ParsePinsJson(const std::string& p_PinsJson) {
