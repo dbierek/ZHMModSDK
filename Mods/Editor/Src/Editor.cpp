@@ -2,6 +2,7 @@
 
 #include <numbers>
 #include <algorithm>
+#include <future>
 
 #include "Hooks.h"
 #include "Logging.h"
@@ -31,6 +32,7 @@
 #include <ResourceLib_HM3.h>
 
 #include "Util/StringUtils.h"
+#include "Util/HttpUtils.h"
 
 Editor::Editor() {
     // Disable ZTemplateEntityBlueprintFactory freeing its associated data.
@@ -499,6 +501,38 @@ void Editor::OnFrameUpdate(const SGameUpdateEvent& p_UpdateEvent) {
         m_ItemToRemove = {};
         m_RemoveItemFromInventory = false;
     }
+
+    static std::future<std::map<std::string, PinLists>> s_DownloadFuture;
+    static bool s_DownloadStarted = false;
+    static bool s_DownloadCompleted = false;
+
+    if (m_ClassToInputAndOutputPins.empty() && !s_DownloadStarted) {
+        const std::string s_PinsUrl =
+            "https://raw.githubusercontent.com/glacier-modding/glaciermodding.org"
+            "/refs/heads/main/docs/modding/hitman/guides/pins.json";
+
+        s_DownloadFuture = std::async(
+            std::launch::async, [this, s_PinsUrl]() {
+                std::string jsonContent = Util::HttpUtils::DownloadFromUrl(s_PinsUrl);
+
+                if (!jsonContent.empty()) {
+                    return ParsePinsJson(jsonContent);
+                }
+
+                return std::map<std::string, PinLists>();
+            }
+        );
+
+        s_DownloadStarted = true;
+    }
+
+    if (s_DownloadStarted && !s_DownloadCompleted) {
+        if (s_DownloadFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+            m_ClassToInputAndOutputPins = s_DownloadFuture.get();
+            s_DownloadCompleted = true;
+            Logger::Debug("Pin list download complete! Loaded {} classes.", m_ClassToInputAndOutputPins.size());
+        }
+    }
 }
 
 void Editor::ProcessTasks() {
@@ -520,6 +554,131 @@ void Editor::ProcessTasks() {
 void Editor::QueueTask(std::function<void()> p_Task) {
     std::lock_guard lock(m_TaskMutex);
     m_TaskQueue.push_back(std::move(p_Task));
+}
+
+std::vector<Editor::PinInfo> Editor::GetPins(ZEntityRef p_EntityRef, bool outputPins) {
+    std::vector<PinInfo> result;
+    std::unordered_set<std::string> seen;
+
+    if (!p_EntityRef || !p_EntityRef->GetType()->m_pInterfaceData) {
+        return result;
+    }
+
+    TArray<SInterfaceData>* interfaces = p_EntityRef->GetType()->m_pInterfaceData;
+
+    for (size_t i = 0; i < interfaces->size(); ++i)
+    {
+        const SInterfaceData& interfaceData = (*interfaces)[i];
+        const IType* s_TypeInfo = interfaceData.m_Type->GetTypeInfo();
+
+        if (!s_TypeInfo) {
+            continue;
+        }
+
+        const std::string className = Util::StringUtils::ToLowerCase(s_TypeInfo->pszTypeName);
+
+        auto it = m_ClassToInputAndOutputPins.find(className);
+
+        if (it == m_ClassToInputAndOutputPins.end()) {
+            continue;
+        }
+
+        const auto& pins = outputPins ? it->second.outputPins : it->second.inputPins;
+
+        for (const auto& pin : pins)
+        {
+            if (seen.insert(pin.name).second) {
+                result.push_back(pin);
+            }
+        }
+    }
+
+    std::sort(result.begin(), result.end(),
+        [](const PinInfo& a, const PinInfo& b)
+        {
+            return a.name < b.name;
+        });
+
+    return result;
+}
+
+std::map<std::string, Editor::PinLists> Editor::ParsePinsJson(const std::string& p_PinsJson) {
+    std::map<std::string, PinLists> result;
+
+    simdjson::ondemand::parser parser;
+    simdjson::padded_string json = simdjson::padded_string(p_PinsJson);
+
+    simdjson::ondemand::document doc = parser.iterate(json);
+    simdjson::ondemand::array entries = doc.get_array();
+
+    for (auto entry : entries)
+    {
+        std::string_view path = entry["path"].get_string();
+
+        // extract class name
+        std::string className;
+        {
+            size_t start = path.find('/');
+            size_t end = path.find(".class");
+
+            if (start != std::string_view::npos && end != std::string_view::npos && end > start)
+                className = std::string(path.substr(start + 1, end - start - 1));
+        }
+
+        if (className.empty())
+            continue;
+
+        auto& pins = result[className];
+
+        // INPUT PINS
+        simdjson::ondemand::array inputPins = entry["in"].get_array();
+
+        for (auto pinEntry : inputPins)
+        {
+            std::string_view pinName = pinEntry["pin"].get_string();
+            std::string_view description = pinEntry["description"].get_string();
+
+            pins.inputPins.push_back({
+                std::string(pinName),
+                std::string(description)
+                });
+        }
+
+        // OUTPUT PINS
+        simdjson::ondemand::array outputPins = entry["out"].get_array();
+
+        for (auto pinEntry : outputPins)
+        {
+            std::string_view pinName = pinEntry["pin"].get_string();
+            std::string_view description = pinEntry["description"].get_string();
+
+            pins.outputPins.push_back({
+                std::string(pinName),
+                std::string(description)
+                });
+        }
+    }
+
+    for (auto& [className, pins] : result)
+    {
+        std::sort(
+            pins.inputPins.begin(),
+            pins.inputPins.end(),
+            [](const PinInfo& a, const PinInfo& b) {
+                return a.name < b.name;
+            }
+        );
+
+        std::sort(
+            pins.outputPins.begin(),
+            pins.outputPins.end(),
+            [](const PinInfo& a, const PinInfo& b) {
+                return a.name < b.name;
+            }
+        );
+    }
+
+    return result;
 }
 
 void Editor::OnMouseDown(SVector2 p_Pos, bool p_FirstClick) {
