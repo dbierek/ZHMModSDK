@@ -687,6 +687,12 @@ void Editor::DrawEntityProperties() {
 
                 ImGui::PushID(s_Keyword);
 
+                if (ImGui::SmallButton(ICON_MD_CONTENT_COPY)) {
+                    CopyToClipboard(s_KeywordString.c_str());
+                }
+
+                ImGui::SameLine();
+
                 if (ImGui::SmallButton(ICON_MD_DELETE)) {
                     Functions::ZGameKeywordManager_RemoveKeyword->Call(Globals::GameKeywordManager, s_SelectedEntity, s_Keyword);
 
