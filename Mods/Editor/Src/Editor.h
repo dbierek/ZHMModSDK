@@ -550,6 +550,8 @@ private:
     bool m_DrawAllGizmos = false;
     bool m_DrawShapes = false;
     GizmoEntity* m_SelectedGizmoEntity = nullptr;
+    bool m_DrawGizmosForSelectedEntityOnly = false;
+    bool m_DrawShapesForSelectedEntityOnly = false;
 
     bool m_DrawCoverInvalidOnNPCErrors = true;
     bool m_DrawHeroGuidesSolid = false;
