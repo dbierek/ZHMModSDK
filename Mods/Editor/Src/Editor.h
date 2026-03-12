@@ -588,6 +588,8 @@ private:
     void* m_InputPinData = nullptr;
     STypeID* m_OutputPinTypeID = nullptr;
     void* m_OutputPinData = nullptr;
+
+    std::vector<std::string> m_ClassNames;
 };
 
 DECLARE_ZHM_PLUGIN(Editor)
