@@ -289,13 +289,13 @@ void Editor::FindAlocAndPrimForZGeomEntityNode(
             const auto& s_RenderMaterialInstance = s_Primitive.m_pObject->m_pMaterial.GetResource();
 
             for (const auto& s_SemanticStringPair : s_RenderMaterialInstance->m_pEffect->m_SemanticStringPairs) {
-                if (s_SemanticStringPair.m_ShaderParameterName == "mapDiffuse") {
+                if (s_SemanticStringPair.m_ShaderParameterName == "mapDiffuse" ) {
                     s_DiffuseTexturePropertyName = s_SemanticStringPair.m_MaterialPropertyName;
                 }
-                else if (s_SemanticStringPair.m_ShaderParameterName == "mapNormal") {
+                if (s_SemanticStringPair.m_ShaderParameterName == "mapNormal") {
                     s_NormalTexturePropertyName = s_SemanticStringPair.m_MaterialPropertyName;
                 }
-                else if (s_SemanticStringPair.m_ShaderParameterName == "mapSpecular") {
+                if (s_SemanticStringPair.m_ShaderParameterName == "mapSpecular") {
                     s_SpecularTexturePropertyName = s_SemanticStringPair.m_MaterialPropertyName;
                 }
             }
@@ -308,13 +308,13 @@ void Editor::FindAlocAndPrimForZGeomEntityNode(
                 const ZResourceContainer::SResourceInfo& s_MaterialInstanceResourceInfo = s_Primitive.m_pObject->m_pMaterial.GetResourceInfo();
 
                 for (const auto& s_TextureInfo : s_RenderMaterialInstance->m_TextureInfo) {
-                    if (s_TextureInfo.Name == s_DiffuseTexturePropertyName) {
+                    if (s_TextureInfo.Name == s_DiffuseTexturePropertyName || s_TextureInfo.Name == "mapTexture2D_01") {
                         s_DiffuseTextureReferenceIndex = s_TextureInfo.nResourceOffset;
                     }
-                    else if (s_TextureInfo.Name == s_NormalTexturePropertyName) {
+                    else if (s_TextureInfo.Name == s_NormalTexturePropertyName || s_TextureInfo.Name == "mapTexture2DNormal_01") {
                         s_NormalTextureReferenceIndex = s_TextureInfo.nResourceOffset;
                     }
-                    else if (s_TextureInfo.Name == s_SpecularTexturePropertyName) {
+                    else if (s_TextureInfo.Name == s_SpecularTexturePropertyName || s_TextureInfo.Name == "mapTexture2D_03") {
                         s_SpecularTextureReferenceIndex = s_TextureInfo.nResourceOffset;
                     }
                 }
