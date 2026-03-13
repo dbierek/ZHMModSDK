@@ -683,8 +683,7 @@ void EditorServer::SendNavKitScene(WebSocket* p_Socket, uWS::Loop* p_Loop) {
     Logger::Info("Sending Meshes...");
     Plugin()->FindMeshes(
         [p_Socket, p_Loop, s_AnyMeshSentOverall, s_TotalMeshesSent, s_LastLoggedMilestone](
-    const std::vector<std::tuple<std::vector<std::pair<std::string, std::string>>, Quat, std::string, std::string,
-                                 ZEntityRef>>& p_Entities,
+    const std::vector<NavKitMeshEntity>& p_Entities,
     const bool p_IsLastMeshBatch
 ) -> void {
             std::ostringstream s_BatchJson;
@@ -697,27 +696,42 @@ void EditorServer::SendNavKitScene(WebSocket* p_Socket, uWS::Loop* p_Loop) {
                     Logger::Info("Meshes sent: {}", *s_TotalMeshesSent);
                     *s_LastLoggedMilestone = currentMilestone;
                 }
-                for (auto& [s_Hashes, s_Quat, s_RoomName, s_FolderName, s_Entity] : p_Entities) {
+                for (auto& [s_AlocHash, s_PrimHash, s_MeshTextures, s_Quat, s_RoomName, s_FolderName, s_Entity] : p_Entities) {
                     if (IsExcludedFromNavMeshExport(s_Entity)) continue;
-                    if (s_Hashes.empty()) {
-                        continue;
+                    // if (s_Textures.empty()) {
+                    //     continue;
+                    // }
+                    if (!s_IsFirstItemInBatch) {
+                        s_BatchJson << ",";
                     }
-                    for (const auto& s_AlocAndPrimHashes : s_Hashes) {
-                        if (!s_IsFirstItemInBatch) {
+                    s_IsFirstItemInBatch = false;
+                    s_DidPrepareDataThisBatch = true;
+                    s_BatchJson << "{";
+                    s_BatchJson << write_json("alocHash") << ":" << write_json(s_AlocHash) << ",";
+                    s_BatchJson << write_json("primHash") << ":" << write_json(s_PrimHash) << ",";
+                    s_BatchJson << write_json("roomName") << ":" << write_json(s_RoomName) << ",";
+                    s_BatchJson << write_json("roomFolderName") << ":" << write_json(s_FolderName) << ",";
+                    s_BatchJson << write_json("entity") << ":";
+
+                    WriteEntityTransforms(s_BatchJson, s_Quat, s_Entity);
+                    s_BatchJson << "," << write_json("textures") << ":[";
+                    bool s_FirstTexture = true;
+                    for (const auto& [m_DiffuseTextureHash, m_NormalTextureHash, m_SpecularTextureHash] :
+                         s_MeshTextures) {
+                        if (!s_FirstTexture) {
                             s_BatchJson << ",";
                         }
-                        s_IsFirstItemInBatch = false;
-                        s_DidPrepareDataThisBatch = true;
-
+                        else {
+                            s_FirstTexture = false;
+                        }
                         s_BatchJson << "{";
-                        s_BatchJson << write_json("alocHash") << ":" << write_json(s_AlocAndPrimHashes.first) << ",";
-                        s_BatchJson << write_json("primHash") << ":" << write_json(s_AlocAndPrimHashes.second) << ",";
-                        s_BatchJson << write_json("roomName") << ":" << write_json(s_RoomName) << ",";
-                        s_BatchJson << write_json("roomFolderName") << ":" << write_json(s_FolderName) << ",";
-                        s_BatchJson << write_json("entity") << ":";
-                        WriteEntityTransforms(s_BatchJson, s_Quat, s_Entity);
+                        s_BatchJson << write_json("diffuse") << ":" << write_json(m_DiffuseTextureHash) << ",";
+                        s_BatchJson << write_json("normal") << ":" << write_json(m_NormalTextureHash) << ",";
+                        s_BatchJson << write_json("specular") << ":" << write_json(m_SpecularTextureHash);
                         s_BatchJson << "}";
                     }
+                    s_BatchJson << "]";
+                    s_BatchJson << "}";
                 }
             }
             if (s_DidPrepareDataThisBatch) {

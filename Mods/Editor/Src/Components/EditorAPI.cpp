@@ -253,7 +253,7 @@ Quat Editor::GetParentQuat(const ZEntityRef p_Entity) {
 std::pair<std::string, std::string> Editor::FindRoomForEntity(const ZEntityRef p_Entity, const std::unordered_map<std::string, std::string>& roomNameToFolderName) {
     std::shared_lock s_Lock(m_CachedEntityTreeMutex);
 
-    //ZEntityRef entityRef = p_Entity.GetLogicalParent();    
+    //ZEntityRef entityRef = p_Entity.GetLogicalParent();
     auto entityRef = p_Entity.GetProperty<TEntityRef<ZSpatialEntity>>("m_eidParent").Get().m_entityRef;
 
     // Climb up the parent hierarchy until we find a room entity
@@ -263,13 +263,13 @@ std::pair<std::string, std::string> Editor::FindRoomForEntity(const ZEntityRef p
             return std::make_pair(entityName, roomNameToFolderName.at(entityName));
         }
         entityRef = entityRef.GetProperty<TEntityRef<ZSpatialEntity>>("m_eidParent").Get().m_entityRef;
-    }    
+    }
     //No room has been found, either dynamic entity or non tied to a room (see Miami for ex). Default to top logical parent
     return std::make_pair(m_CachedEntityTreeMap.at(p_Entity)->Parents.back()->Name, "No_Room");
 }
 
 void Editor::FindAlocAndPrimForZGeomEntityNode(
-    std::vector<std::tuple<std::vector<std::pair<std::string, std::string>>, Quat, std::string, std::string, ZEntityRef>>& p_Entities,
+    std::vector<NavKitMeshEntity>& p_Entities,
     const std::shared_ptr<EntityTreeNode>& p_Node, const TArray<SInterfaceData>& p_Interfaces, const char*& p_EntityType, const std::unordered_map<std::string, std::string>& roomNameToFolderName
 ) {
     const ZGeomEntity* s_GeomEntity = p_Node->Entity.QueryInterface<ZGeomEntity>();
@@ -281,32 +281,127 @@ void Editor::FindAlocAndPrimForZGeomEntityNode(
         s_ResourceIndex.val != -1) {
         TArray<unsigned char> s_Flags;
         TArray<ZResourceIndex> s_Indices;
-        std::vector<std::pair<std::string, std::string>> s_AlocAndPrimHashes;
-        Functions::ZResourceContainer_GetResourceReferences->Call(
-            *Globals::ResourceContainer, s_ResourceIndex, s_Indices, s_Flags
-        );
-        const auto s_PrimResourceInfo = (*Globals::ResourceContainer)->
-                m_resources[s_GeomEntity->m_ResourceID.m_nResourceIndex.val];
-        const auto s_PrimHash = s_PrimResourceInfo.rid.GetID();
-        std::string s_PrimHashString {std::format("{:016X}", s_PrimHash)};
-        for (ZResourceIndex s_CurrentResourceIndex : s_Indices) {
-            if (s_CurrentResourceIndex.val < 0) {
-                continue;
+        std::vector<NavKitMeshTextures> s_MeshTextures;
+        for (auto s_Primitive : s_GeomEntity->m_Primitives) {
+            std::string s_DiffuseTexturePropertyName;
+            std::string s_NormalTexturePropertyName;
+            std::string s_SpecularTexturePropertyName;
+            const auto& s_RenderMaterialInstance = s_Primitive.m_pObject->m_pMaterial.GetResource();
+
+            for (const auto& s_SemanticStringPair : s_RenderMaterialInstance->m_pEffect->m_SemanticStringPairs) {
+                if (s_SemanticStringPair.m_ShaderParameterName == "mapDiffuse") {
+                    s_DiffuseTexturePropertyName = s_SemanticStringPair.m_MaterialPropertyName;
+                }
+                else if (s_SemanticStringPair.m_ShaderParameterName == "mapNormal") {
+                    s_NormalTexturePropertyName = s_SemanticStringPair.m_MaterialPropertyName;
+                }
+                else if (s_SemanticStringPair.m_ShaderParameterName == "mapSpecular") {
+                    s_SpecularTexturePropertyName = s_SemanticStringPair.m_MaterialPropertyName;
+                }
             }
-            if (const auto s_ReferenceResourceInfo = (*Globals::ResourceContainer)->m_resources[
-                s_CurrentResourceIndex.val]; s_ReferenceResourceInfo.resourceType == 'ALOC') {
-                const auto s_AlocHash = s_ReferenceResourceInfo.rid.GetID();
-                std::string s_AlocHashString {std::format("{:016X}", s_AlocHash)};
-                std::pair s_AlocAndPrimHashStrings {s_AlocHashString, s_PrimHashString};
-                s_AlocAndPrimHashes.push_back(s_AlocAndPrimHashStrings);
-                Logger::Debug(
-                    "Found ALOC. ID: {} TBLU: {} ALOC: {} PRIM: {}",
-                    s_Id, s_TbluHashString, s_AlocAndPrimHashStrings.first, s_AlocAndPrimHashStrings.second
-                );
+
+            NavKitMeshTextures s_SubmeshTextures = NavKitMeshTextures();
+            if (!s_RenderMaterialInstance->m_TextureInfo.empty()) {
+                uint32_t s_NormalTextureReferenceIndex = -1;
+                uint32_t s_SpecularTextureReferenceIndex = -1;
+                uint32_t s_DiffuseTextureReferenceIndex = -1;
+                const ZResourceContainer::SResourceInfo& s_MaterialInstanceResourceInfo = s_Primitive.m_pObject->m_pMaterial.GetResourceInfo();
+
+                for (const auto& s_TextureInfo : s_RenderMaterialInstance->m_TextureInfo) {
+                    if (s_TextureInfo.Name == s_DiffuseTexturePropertyName) {
+                        s_DiffuseTextureReferenceIndex = s_TextureInfo.nResourceOffset;
+                    }
+                    else if (s_TextureInfo.Name == s_NormalTexturePropertyName) {
+                        s_NormalTextureReferenceIndex = s_TextureInfo.nResourceOffset;
+                    }
+                    else if (s_TextureInfo.Name == s_SpecularTexturePropertyName) {
+                        s_SpecularTextureReferenceIndex = s_TextureInfo.nResourceOffset;
+                    }
+                }
+
+                if (s_DiffuseTextureReferenceIndex != -1) {
+                    const uint32_t s_DiffuseTextureResourceIndex = (*Globals::ResourceContainer)->m_references[s_MaterialInstanceResourceInfo.firstReferenceIndex + s_DiffuseTextureReferenceIndex].index;
+                    const ZRuntimeResourceID s_DiffuseTextureRuntimeResourceID = (*Globals::ResourceContainer)->m_resources[s_DiffuseTextureResourceIndex].rid;
+                    s_SubmeshTextures.m_DiffuseTextureHash = std::format("{:016X}", s_DiffuseTextureRuntimeResourceID.GetID());
+                    // s_MeshInfo.m_DiffuseTextureResourceIndex = s_DiffuseTextureResourceIndex;
+                    // s_MeshInfo.m_DiffuseTextureRuntimeResourceID = s_DiffuseTextureRuntimeResourceID;
+
+                }
+                if (s_NormalTextureReferenceIndex != -1) {
+                    const uint32_t s_NormalTextureResourceIndex = (*Globals::ResourceContainer)->m_references[s_MaterialInstanceResourceInfo.firstReferenceIndex + s_NormalTextureReferenceIndex].index;
+                    const ZRuntimeResourceID s_NormalTextureRuntimeResourceID = (*Globals::ResourceContainer)->m_resources[s_NormalTextureResourceIndex].rid;
+                    s_SubmeshTextures.m_NormalTextureHash = std::format("{:016X}", s_NormalTextureRuntimeResourceID.GetID());
+                    // s_MeshInfo.m_NormalTextureResourceIndex = s_NormalTextureResourceIndex;
+                    // s_MeshInfo.m_NormalTextureRuntimeResourceID = s_NormalTextureRuntimeResourceID;
+
+                }
+                if (s_SpecularTextureReferenceIndex != -1) {
+                    const uint32_t s_SpecularTextureResourceIndex = (*Globals::ResourceContainer)->m_references[s_MaterialInstanceResourceInfo.firstReferenceIndex + s_SpecularTextureReferenceIndex].index;
+                    const ZRuntimeResourceID s_SpecularTextureRuntimeResourceID = (*Globals::ResourceContainer)->m_resources[s_SpecularTextureResourceIndex].rid;
+                    s_SubmeshTextures.m_SpecularTextureHash = std::format("{:016X}", s_SpecularTextureRuntimeResourceID.GetID());
+                    // s_MeshInfo.m_SpecularTextureResourceIndex = s_SpecularTextureResourceIndex;
+                    // s_MeshInfo.m_SpecularTextureRuntimeResourceID = s_SpecularTextureRuntimeResourceID;
+
+                }
+            }
+            s_MeshTextures.push_back(s_SubmeshTextures);
+        }
+        ///////////////////////////// TODO: Is this needed? How many alocs / prims can be in a single ZGeomEntityNode?
+        ///
+        {
+            Functions::ZResourceContainer_GetResourceReferences->Call(
+                *Globals::ResourceContainer, s_ResourceIndex, s_Indices, s_Flags
+            );
+            const auto s_PrimResourceInfo = (*Globals::ResourceContainer)->
+                    m_resources[s_GeomEntity->m_ResourceID.m_nResourceIndex.val];
+            const auto s_PrimHash = s_PrimResourceInfo.rid.GetID();
+            std::string s_PrimHashString {std::format("{:016X}", s_PrimHash)};
+            for (auto [s_PrimIndex, s_CurrentResourceIndex] : std::views::enumerate(s_Indices)) {
+                if (s_CurrentResourceIndex.val < 0) {
+                    continue;
+                }
+                const auto s_ReferenceResourceInfo = (*Globals::ResourceContainer)->m_resources[
+                    s_CurrentResourceIndex.val];
+                const auto s_PrimHash = s_ReferenceResourceInfo.rid.GetID();
+                std::string s_PrimHashString {std::format("{:016X}", s_PrimHash)};
             }
         }
-        if (std::string s_collision_ioi_string = GetCollisionHash(p_Node->Entity);
-            !s_collision_ioi_string.empty() && s_collision_ioi_string != "null") {
+        ///////////////////////////////////////
+        // Functions::ZResourceContainer_GetResourceReferences->Call(
+            // *Globals::ResourceContainer, s_ResourceIndex, s_Indices, s_Flags
+        // );
+        // const auto s_PrimResourceInfo = (*Globals::ResourceContainer)->
+                // m_resources[s_GeomEntity->m_ResourceID.m_nResourceIndex.val];
+        // if (std::string s_AlocHash = GetCollisionHash(p_Node->Entity);
+        //     !s_AlocHash.empty() && s_AlocHash != "null") {
+        //
+        //     for (auto [s_PrimIndex, s_CurrentResourceIndex] : std::views::enumerate(s_Indices)) {
+        //         if (s_CurrentResourceIndex.val < 0) {
+        //             continue;
+        //         }
+        //         const auto s_ReferenceResourceInfo = (*Globals::ResourceContainer)->m_resources[
+        //             s_CurrentResourceIndex.val];
+        //         const auto s_PrimHash = s_ReferenceResourceInfo.rid.GetID();
+        //         std::string s_PrimHashString {std::format("{:016X}", s_PrimHash)};
+        //         s_MeshTextures[s_PrimIndex].m_AlocHash = s_AlocHash;
+        //         s_MeshTextures[s_PrimIndex].m_PrimHash = s_PrimHashString;
+        //         // if (s_ReferenceResourceInfo.resourceType == 'ALOC') {
+        //         //     const auto s_AlocHash = s_ReferenceResourceInfo.rid.GetID();
+        //         //     std::string s_AlocHashString {std::format("{:016X}", s_AlocHash)};
+        //         //     Logger::Debug(
+        //         //         "Found ALOC. ID: {} TBLU: {} ALOC: {} PRIM: {}",
+        //         //         s_Id, s_TbluHashString, s_AlocHashString, s_PrimHashString
+        //         //     );
+        //         // }
+        //
+        //         Logger::Debug(
+        //             "Found ALOC. ID: {} TBLU: {} PRIM: {} ALOC: {}", s_Id, s_TbluHashString,
+        //             s_PrimHashString, s_AlocHash
+        //         );
+        //     }
+        if (std::string s_AlocHash = GetCollisionHash(p_Node->Entity);
+            !s_AlocHash.empty() && s_AlocHash != "null") {
+
             bool s_Skip = false;
             for (auto s_Interface : p_Interfaces) {
                 if (s_Interface.m_Type->GetTypeInfo() != nullptr) {
@@ -318,11 +413,15 @@ void Editor::FindAlocAndPrimForZGeomEntityNode(
                 }
             }
             if (!s_Skip) {
+                const auto s_PrimResourceInfo =
+                    (*Globals::ResourceContainer)-> m_resources[s_GeomEntity->m_ResourceID.m_nResourceIndex.val];
+                const auto s_PrimResourceId = s_PrimResourceInfo.rid.GetID();
+                std::string s_PrimHash {std::format("{:016X}", s_PrimResourceId)};
+
                 Logger::Debug(
                     "Found ALOC. ID: {} TBLU: {} PRIM: {} ALOC: {}", s_Id, s_TbluHashString,
-                    s_PrimHashString, s_collision_ioi_string
+                    s_PrimHash, s_AlocHash
                 );
-                s_AlocAndPrimHashes.emplace_back(s_collision_ioi_string, s_PrimHashString);
                 Quat s_EntityQuat = GetQuatFromProperty(p_Node->Entity);
                 Quat s_ParentQuat = GetParentQuat(p_Node->Entity);
 
@@ -330,8 +429,10 @@ void Editor::FindAlocAndPrimForZGeomEntityNode(
                 s_CombinedQuat = s_ParentQuat * s_EntityQuat;
                 const auto [s_RoomName, s_FolderName] = Plugin()->FindRoomForEntity(p_Node->Entity, roomNameToFolderName);
                 auto s_Entity =
-                        std::make_tuple(
-                            s_AlocAndPrimHashes,
+                        NavKitMeshEntity(
+                            s_AlocHash,
+                            s_PrimHash,
+                            s_MeshTextures,
                             s_CombinedQuat,
                             s_RoomName,
                             s_FolderName,
@@ -344,16 +445,16 @@ void Editor::FindAlocAndPrimForZGeomEntityNode(
 }
 
 void Editor::FindAlocAndPrimForZPrimitiveProxyEntityNode(
-    std::vector<std::tuple<std::vector<std::pair<std::string, std::string>>, Quat, std::string, std::string, ZEntityRef>>& entities,
+    std::vector<NavKitMeshEntity>& s_Entities,
     const std::shared_ptr<EntityTreeNode>& s_Node, const TArray<SInterfaceData>& s_Interfaces, const char*& s_EntityType, const std::unordered_map<std::string, std::string>& roomNameToFolderName
 ) {
     std::string s_Id = std::format("{:016x}", s_Node->Entity->GetType()->m_nEntityID);
-    std::string s_HashString =
+    std::string s_PrimHash =
             std::format("<{:08X}{:08X}>", s_Node->BlueprintFactory.m_IDHigh, s_Node->BlueprintFactory.m_IDLow);
     // TODO: Check if the prim hash is needed here
 
-    if (std::string s_collision_ioi_string = GetCollisionHash(s_Node->Entity);
-        !s_collision_ioi_string.empty() && s_collision_ioi_string != "null") {
+    if (std::string s_AlocHash = GetCollisionHash(s_Node->Entity);
+        !s_AlocHash.empty() && s_AlocHash != "null") {
         bool s_Skip = false;
         for (auto s_Interface : s_Interfaces) {
             if (s_Interface.m_Type->GetTypeInfo() != nullptr) {
@@ -365,33 +466,35 @@ void Editor::FindAlocAndPrimForZPrimitiveProxyEntityNode(
             }
         }
         if (!s_Skip) {
-            std::vector<std::pair<std::string, std::string>> s_AlocHashes;
+            std::vector<NavKitMeshTextures> s_NavKitMeshHashInfos;
             Logger::Debug(
-                "Found ALOC. ID: {} TBLU: {} ALOC: {}", s_Id, s_HashString, s_collision_ioi_string
+                "Found ALOC. ID: {} TBLU: {} ALOC: {}", s_Id, s_PrimHash, s_AlocHash
             );
-            s_AlocHashes.emplace_back(s_collision_ioi_string, "");
+            // s_NavKitMeshHashInfos.emplace_back(s_AlocHash, s_PrimHash);
             Quat s_EntityQuat = GetQuatFromProperty(s_Node->Entity);
             Quat s_ParentQuat = GetParentQuat(s_Node->Entity);
 
             Quat s_CombinedQuat;
             s_CombinedQuat = s_ParentQuat * s_EntityQuat;
             const auto [s_RoomName, s_FolderName] = Plugin()->FindRoomForEntity(s_Node->Entity, roomNameToFolderName);
-            auto s_Entity =
-                    std::make_tuple(
-                        s_AlocHashes,
+            NavKitMeshEntity s_Entity =
+                    NavKitMeshEntity(
+                        s_AlocHash,
+                        s_PrimHash,
+                        s_NavKitMeshHashInfos,
                         s_CombinedQuat,
                         s_RoomName,
                         s_FolderName,
                         s_Node->Entity
                     );
-            entities.push_back(s_Entity);
+            s_Entities.push_back(s_Entity);
         }
     }
 }
 
 void Editor::FindMeshes(
     const std::function<void(
-        std::vector<std::tuple<std::vector<std::pair<std::string, std::string>>, Quat, std::string, std::string, ZEntityRef>>&, bool p_Done
+        std::vector<NavKitMeshEntity>&, bool p_Done
         )>& p_SendEntitiesCallback,
     const std::function<void()>& p_RebuiltCallback
 ) {
@@ -401,7 +504,7 @@ void Editor::FindMeshes(
     }
     std::shared_lock s_Lock(m_CachedEntityTreeMutex);
 
-    std::vector<std::tuple<std::vector<std::pair<std::string, std::string>>, Quat, std::string, std::string, ZEntityRef>> entities;
+    std::vector<NavKitMeshEntity> entities;
 
     // Create a queue and add the root to it.
     std::queue<std::pair<std::shared_ptr<EntityTreeNode>, std::shared_ptr<EntityTreeNode>>> s_NodeQueue;
@@ -713,7 +816,7 @@ void Editor::RebuildEntityTree() {
 }
 
 std::string Editor::GetEntityName(ZEntityRef p_Entity, bool withID)
-{ 
+{
     std::unordered_map<ZEntityRef, std::shared_ptr<EntityTreeNode>>::iterator it = m_CachedEntityTreeMap.find(*p_Entity->GetID(p_Entity));
     if (it == m_CachedEntityTreeMap.end()) {
         return "";
