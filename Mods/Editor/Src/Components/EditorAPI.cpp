@@ -318,87 +318,24 @@ void Editor::FindAlocAndPrimForZGeomEntityNode(
                         s_SpecularTextureReferenceIndex = s_TextureInfo.nResourceOffset;
                     }
                 }
-
                 if (s_DiffuseTextureReferenceIndex != -1) {
                     const uint32_t s_DiffuseTextureResourceIndex = (*Globals::ResourceContainer)->m_references[s_MaterialInstanceResourceInfo.firstReferenceIndex + s_DiffuseTextureReferenceIndex].index;
                     const ZRuntimeResourceID s_DiffuseTextureRuntimeResourceID = (*Globals::ResourceContainer)->m_resources[s_DiffuseTextureResourceIndex].rid;
                     s_SubmeshTextures.m_DiffuseTextureHash = std::format("{:016X}", s_DiffuseTextureRuntimeResourceID.GetID());
-                    // s_MeshInfo.m_DiffuseTextureResourceIndex = s_DiffuseTextureResourceIndex;
-                    // s_MeshInfo.m_DiffuseTextureRuntimeResourceID = s_DiffuseTextureRuntimeResourceID;
-
                 }
                 if (s_NormalTextureReferenceIndex != -1) {
                     const uint32_t s_NormalTextureResourceIndex = (*Globals::ResourceContainer)->m_references[s_MaterialInstanceResourceInfo.firstReferenceIndex + s_NormalTextureReferenceIndex].index;
                     const ZRuntimeResourceID s_NormalTextureRuntimeResourceID = (*Globals::ResourceContainer)->m_resources[s_NormalTextureResourceIndex].rid;
                     s_SubmeshTextures.m_NormalTextureHash = std::format("{:016X}", s_NormalTextureRuntimeResourceID.GetID());
-                    // s_MeshInfo.m_NormalTextureResourceIndex = s_NormalTextureResourceIndex;
-                    // s_MeshInfo.m_NormalTextureRuntimeResourceID = s_NormalTextureRuntimeResourceID;
-
                 }
                 if (s_SpecularTextureReferenceIndex != -1) {
                     const uint32_t s_SpecularTextureResourceIndex = (*Globals::ResourceContainer)->m_references[s_MaterialInstanceResourceInfo.firstReferenceIndex + s_SpecularTextureReferenceIndex].index;
                     const ZRuntimeResourceID s_SpecularTextureRuntimeResourceID = (*Globals::ResourceContainer)->m_resources[s_SpecularTextureResourceIndex].rid;
                     s_SubmeshTextures.m_SpecularTextureHash = std::format("{:016X}", s_SpecularTextureRuntimeResourceID.GetID());
-                    // s_MeshInfo.m_SpecularTextureResourceIndex = s_SpecularTextureResourceIndex;
-                    // s_MeshInfo.m_SpecularTextureRuntimeResourceID = s_SpecularTextureRuntimeResourceID;
-
                 }
             }
             s_MeshTextures.push_back(s_SubmeshTextures);
         }
-        ///////////////////////////// TODO: Is this needed? How many alocs / prims can be in a single ZGeomEntityNode?
-        ///
-        {
-            Functions::ZResourceContainer_GetResourceReferences->Call(
-                *Globals::ResourceContainer, s_ResourceIndex, s_Indices, s_Flags
-            );
-            const auto s_PrimResourceInfo = (*Globals::ResourceContainer)->
-                    m_resources[s_GeomEntity->m_ResourceID.m_nResourceIndex.val];
-            const auto s_PrimHash = s_PrimResourceInfo.rid.GetID();
-            std::string s_PrimHashString {std::format("{:016X}", s_PrimHash)};
-            for (auto [s_PrimIndex, s_CurrentResourceIndex] : std::views::enumerate(s_Indices)) {
-                if (s_CurrentResourceIndex.val < 0) {
-                    continue;
-                }
-                const auto s_ReferenceResourceInfo = (*Globals::ResourceContainer)->m_resources[
-                    s_CurrentResourceIndex.val];
-                const auto s_PrimHash = s_ReferenceResourceInfo.rid.GetID();
-                std::string s_PrimHashString {std::format("{:016X}", s_PrimHash)};
-            }
-        }
-        ///////////////////////////////////////
-        // Functions::ZResourceContainer_GetResourceReferences->Call(
-            // *Globals::ResourceContainer, s_ResourceIndex, s_Indices, s_Flags
-        // );
-        // const auto s_PrimResourceInfo = (*Globals::ResourceContainer)->
-                // m_resources[s_GeomEntity->m_ResourceID.m_nResourceIndex.val];
-        // if (std::string s_AlocHash = GetCollisionHash(p_Node->Entity);
-        //     !s_AlocHash.empty() && s_AlocHash != "null") {
-        //
-        //     for (auto [s_PrimIndex, s_CurrentResourceIndex] : std::views::enumerate(s_Indices)) {
-        //         if (s_CurrentResourceIndex.val < 0) {
-        //             continue;
-        //         }
-        //         const auto s_ReferenceResourceInfo = (*Globals::ResourceContainer)->m_resources[
-        //             s_CurrentResourceIndex.val];
-        //         const auto s_PrimHash = s_ReferenceResourceInfo.rid.GetID();
-        //         std::string s_PrimHashString {std::format("{:016X}", s_PrimHash)};
-        //         s_MeshTextures[s_PrimIndex].m_AlocHash = s_AlocHash;
-        //         s_MeshTextures[s_PrimIndex].m_PrimHash = s_PrimHashString;
-        //         // if (s_ReferenceResourceInfo.resourceType == 'ALOC') {
-        //         //     const auto s_AlocHash = s_ReferenceResourceInfo.rid.GetID();
-        //         //     std::string s_AlocHashString {std::format("{:016X}", s_AlocHash)};
-        //         //     Logger::Debug(
-        //         //         "Found ALOC. ID: {} TBLU: {} ALOC: {} PRIM: {}",
-        //         //         s_Id, s_TbluHashString, s_AlocHashString, s_PrimHashString
-        //         //     );
-        //         // }
-        //
-        //         Logger::Debug(
-        //             "Found ALOC. ID: {} TBLU: {} PRIM: {} ALOC: {}", s_Id, s_TbluHashString,
-        //             s_PrimHashString, s_AlocHash
-        //         );
-        //     }
         if (std::string s_AlocHash = GetCollisionHash(p_Node->Entity);
             !s_AlocHash.empty() && s_AlocHash != "null") {
 
