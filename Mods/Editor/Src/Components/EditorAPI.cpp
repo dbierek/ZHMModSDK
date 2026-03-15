@@ -288,9 +288,13 @@ void Editor::FindAlocAndPrimForZGeomEntityNode(
         }
     }
     const ZGeomEntity* s_GeomEntity = p_Node->Entity.QueryInterface<ZGeomEntity>();
-    std::string s_Id = std::format("{:016x}", p_Node->Entity->GetType()->m_nEntityID);
+    std::string s_EntityId = std::format("{:016x}", p_Node->Entity->GetType()->m_nEntityID);
     std::string s_TbluHashString =
-            std::format("<{:08X}{:08X}>", p_Node->BlueprintFactory.m_IDHigh, p_Node->BlueprintFactory.m_IDLow);
+        std::format("<{:08X}{:08X}>", p_Node->BlueprintFactory.m_IDHigh, p_Node->BlueprintFactory.m_IDLow);
+    const auto s_PrimResourceInfo =
+        (*Globals::ResourceContainer)-> m_resources[s_GeomEntity->m_ResourceID.m_nResourceIndex.val];
+    const auto s_PrimResourceId = s_PrimResourceInfo.rid.GetID();
+    std::string s_PrimHash {std::format("{:016X}", s_PrimResourceId)};
 
     if (ZResourceIndex s_GeomEntityResourceIndex(s_GeomEntity->m_ResourceID.m_nResourceIndex);
         s_GeomEntityResourceIndex.val != -1) {
@@ -302,6 +306,11 @@ void Editor::FindAlocAndPrimForZGeomEntityNode(
         );
         std::vector<std::string> s_PrimMatis;
         for (auto s_MatiResourceIndex : s_Indices) {
+            if (s_MatiResourceIndex.val == -1) {
+                s_PrimMatis.push_back("");
+                continue;
+            }
+
             const ZRuntimeResourceID s_MatiRuntimeResourceID = (*Globals::ResourceContainer)->m_resources[s_MatiResourceIndex.val].rid;
             TResourcePtr<ZRenderMaterialInstance> s_MatiResource;
             Globals::ResourceManager->GetResourcePtr(s_MatiResource, s_MatiRuntimeResourceID, 0);
@@ -361,15 +370,11 @@ void Editor::FindAlocAndPrimForZGeomEntityNode(
             p_MatiTextures[s_MatiHash] = s_MeshMatiTextures;
             s_PrimMatis.push_back(s_MatiHash);
         }
-        const auto s_PrimResourceInfo =
-            (*Globals::ResourceContainer)-> m_resources[s_GeomEntity->m_ResourceID.m_nResourceIndex.val];
-        const auto s_PrimResourceId = s_PrimResourceInfo.rid.GetID();
-        std::string s_PrimHash {std::format("{:016X}", s_PrimResourceId)};
         p_PrimMatis[s_PrimHash] = s_PrimMatis;
 
         Logger::Debug(
             "Found ALOC. ID: {} TBLU: {} PRIM: {} ALOC: {}",
-            s_Id, s_TbluHashString, s_PrimHash, s_AlocHash
+            s_EntityId, s_TbluHashString, s_PrimHash, s_AlocHash
         );
         Quat s_EntityQuat = GetQuatFromProperty(p_Node->Entity);
         Quat s_ParentQuat = GetParentQuat(p_Node->Entity);
