@@ -17,6 +17,7 @@
 #include "ImGuizmo.h"
 #include "EditorServer.h"
 #include "EntityTreeNode.h"
+#include "NavKit.h"
 
 struct QneTransform {
     SVector3 Position;
@@ -67,7 +68,10 @@ public:
     ZEntityRef FindEntity(EntitySelector p_Selector);
     static std::string GetCollisionHash(auto p_SelectedEntity);
     void FindMeshes(
-        const std::function<void(std::vector<std::tuple<std::vector<std::pair<std::string, std::string>>, Quat, std::string, std::string, ZEntityRef>>&, bool p_Done)>&
+        const std::function<void(
+            std::vector<NavKitMeshEntity>&, std::map<std::string, NavKitMatiTextures>&,
+            std::map<std::string, std::vector<std::string>>&, bool
+        )>&
         p_SendEntitiesCallback, const std::function<void()>& p_RebuiltCallback
     );
     std::vector<std::tuple<std::vector<std::string>, Quat, ZEntityRef>> FindEntitiesByType(
@@ -176,12 +180,18 @@ private:
 
     static void ToggleEditorServerEnabled();
     static void FindAlocAndPrimForZGeomEntityNode(
-        std::vector<std::tuple<std::vector<std::pair<std::string, std::string>>, Quat, std::string, std::string, ZEntityRef>>& p_Entities,
-        const std::shared_ptr<EntityTreeNode>& p_Node, const TArray<SInterfaceData>& p_Interfaces, const char*& p_EntityType, const std::unordered_map<std::string, std::string>& roomNameToFolderName
+        std::vector<NavKitMeshEntity>& p_Entities,
+        const std::shared_ptr<EntityTreeNode>& p_Node, const TArray<SInterfaceData>& p_Interfaces, const char*& p_EntityType, const
+        std::unordered_map<std::string, std::string>& p_RoomNameToFolderName,
+        std::map<std::string, NavKitMatiTextures>& p_MatiTextures,
+        std::map<std::string, std::vector<std::string>>& p_PrimMatis
     );
     static void FindAlocAndPrimForZPrimitiveProxyEntityNode(
-        std::vector<std::tuple<std::vector<std::pair<std::string, std::string>>, Quat, std::string, std::string, ZEntityRef>>& entities,
-        const std::shared_ptr<EntityTreeNode>& s_Node, const TArray<SInterfaceData>& s_Interfaces, const char*& s_EntityType, const std::unordered_map<std::string, std::string>& roomNameToFolderName
+        std::vector<NavKitMeshEntity>& s_Entities,
+        const std::shared_ptr<EntityTreeNode>& s_Node, const TArray<SInterfaceData>& s_Interfaces, const char*& s_EntityType, const
+        std::unordered_map<std::string, std::string>& roomNameToFolderName,
+        std::map<std::string, NavKitMatiTextures>& p_MatiTextures,
+        std::map<std::string, std::vector<std::string>>& p_PrimMatis
     );
 
     // Properties
