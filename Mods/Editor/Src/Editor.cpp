@@ -124,6 +124,8 @@ void Editor::Init() {
     m_UseScaleSnap = GetSettingBool("general", "scale_snap", true);
     m_ScaleSnapValue = GetSettingDouble("general", "scale_snap_value", 1.0);
     m_UseQneTransforms = GetSettingBool("general", "qne_transforms", false);
+    m_RoundCopiedMatrixValues = GetSettingBool("general", "round_copied_matrix_values", false);
+    m_CopyDecimalPlaces = GetSettingInt("general", "copy_decimal_places", 3);
     m_EditorWindowsVisible = GetSettingBool("general", "editor_windows_visible", true);
 }
 
@@ -953,6 +955,14 @@ SMatrix Editor::QneTransformToMatrix(const QneTransform& p_Transform) {
     s_Matrix.Trans.z = p_Transform.Position.z;
 
     return s_Matrix;
+}
+
+std::string Editor::FormatFloat(float p_Value, bool p_Round, uint32_t p_Decimals) {
+    if (p_Round) {
+        return fmt::format("{:.{}f}", p_Value, p_Decimals);
+    }
+
+    return fmt::format("{}", p_Value);
 }
 
 DEFINE_PLUGIN_DETOUR(Editor, bool, OnLoadScene, ZEntitySceneContext* th, SSceneInitParameters& p_Parameters) {
