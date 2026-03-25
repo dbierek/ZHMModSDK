@@ -811,7 +811,7 @@ void EditorServer::SendNavKitScene(WebSocket* p_Socket, uWS::Loop* p_Loop) {
                             p_Socket->send("]}", uWS::OpCode::TEXT);
                         }
                         p_Socket->send("]}", uWS::OpCode::TEXT);
-                        p_Socket->send("Done sending scene.", uWS::OpCode::TEXT);
+                        p_Socket->send("Done sending entities.", uWS::OpCode::TEXT);
                         Logger::Info("Done sending scene.");
                     }
                 );
