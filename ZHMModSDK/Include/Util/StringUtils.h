@@ -95,6 +95,20 @@ namespace Util {
             }
         }
 
+        static std::u32string UTF8ToUTF32(const std::string& p_UTF8) {
+            std::u32string s_Out;
+            const char* p = p_UTF8.data();
+            const char* s_End = p + p_UTF8.size();
+
+            while (p < s_End) {
+                uint32_t s_Code = DecodeUTF8(p);
+
+                s_Out.push_back((char32_t)s_Code);
+            }
+
+            return s_Out;
+        }
+
     private:
         static uint32_t DecodeUTF8(const char*& p) {
             const uint8_t c = *p;
@@ -133,20 +147,6 @@ namespace Util {
             p++;
 
             return '?';
-        }
-
-        static std::u32string UTF8ToUTF32(const std::string& p_UTF8) {
-            std::u32string s_Out;
-            const char* p = p_UTF8.data();
-            const char* s_End = p + p_UTF8.size();
-
-            while (p < s_End) {
-                uint32_t s_Code = DecodeUTF8(p);
-
-                s_Out.push_back((char32_t)s_Code);
-            }
-
-            return s_Out;
         }
 
         static char32_t StripDiacritic(char32_t c) {
