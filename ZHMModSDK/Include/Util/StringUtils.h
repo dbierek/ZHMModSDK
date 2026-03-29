@@ -69,18 +69,8 @@ namespace Util {
             std::u32string s_String = UTF8ToUTF32(p_String);
             std::u32string s_SubString = UTF8ToUTF32(p_SubString);
 
-            auto normalize = [&](std::u32string& s) {
-                for (auto& c : s) {
-                    if (!p_CaseSensitive) {
-                        c = std::tolower(c);
-                    }
-
-                    c = StripDiacritic(c);
-                }
-            };
-
-            normalize(s_String);
-            normalize(s_SubString);
+            NormalizeUTF32(s_String, p_CaseSensitive);
+            NormalizeUTF32(s_SubString, p_CaseSensitive);
 
             return std::ranges::search(s_String, s_SubString).begin() != s_String.end();
         }
@@ -93,6 +83,16 @@ namespace Util {
         static bool StartsWith(const std::string& p_String, const std::string& p_Prefix) {
             return p_String.size() >= p_Prefix.size() &&
                     p_String.compare(0, p_Prefix.size(), p_Prefix) == 0;
+        }
+
+        static void NormalizeUTF32(std::u32string& p_String, bool p_CaseSensitive = false) {
+            for (auto& c : p_String) {
+                if (!p_CaseSensitive) {
+                    c = std::tolower(c);
+                }
+
+                c = StripDiacritic(c);
+            }
         }
 
     private:
