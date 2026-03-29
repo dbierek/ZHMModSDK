@@ -1158,9 +1158,11 @@ DEFINE_PLUGIN_DETOUR(
         } {
             std::unique_lock s_Lock(m_EntityRefToFactoryRuntimeResourceIDsMutex);
 
-            m_EntityRefToFactoryRuntimeResourceIDs[s_SubEntity] = {
-                s_SubEntityFactoryRuntimeResourceID, th->m_ridResource
-            };
+            if (!m_EntityRefToFactoryRuntimeResourceIDs.contains(s_SubEntity)) {
+                m_EntityRefToFactoryRuntimeResourceIDs[s_SubEntity] = {
+                    s_SubEntityFactoryRuntimeResourceID, th->m_ridResource
+                };
+            }
         }
     }
 
