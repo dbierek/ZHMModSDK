@@ -291,7 +291,7 @@ PATTERN_FUNCTION(
     "\x48\x89\x5C\x24\x10\x48\x89\x74\x24\x18\x57\x48\x83\xEC\x00\x48\x8B\x41\x08\x8B\xF2",
     "xxxxxxxxxxxxxx?xxxxxx",
     ZEntityImpl_EnsureUniqueType,
-    ZEntityType* (ZEntityImpl* th, unsigned int nUniqueMapMask)
+    ZEntityType* (ZEntityImpl* th, uint32_t nUniqueMapMask)
 );
 
 PATTERN_FUNCTION(
@@ -376,7 +376,7 @@ PATTERN_FUNCTION(
     "\x4C\x8B\xDC\x49\x89\x6B\x08",
     "xxxxxxx",
     ZWorldInventory_RequestNewItem,
-    uint32(ZWorldInventory* th, const ZRepositoryID& repId, ZDelegate<void(unsigned int, TEntityRef<IItemBase>)> callback,
+    uint32(ZWorldInventory* th, const ZRepositoryID& repId, ZDelegate<void(uint32_t, TEntityRef<IItemBase>)> callback,
         uint64_t entityID, bool bLoading, const ZEntityRef& rParentSpatial, const ZEntityRef& rCreator)
 );
 

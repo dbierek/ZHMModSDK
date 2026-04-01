@@ -161,7 +161,7 @@ public:
     static EngineFunction<bool(ZTemplateBlueprintInstaller* th, ZResourcePending* ResourcePending)>*
     ZTemplateBlueprintInstaller_Install;
 
-    static EngineFunction<ZEntityType*(ZEntityImpl* th, unsigned int nUniqueMapMask)>* ZEntityImpl_EnsureUniqueType;
+    static EngineFunction<ZEntityType*(ZEntityImpl* th, uint32_t nUniqueMapMask)>* ZEntityImpl_EnsureUniqueType;
 
     static EngineFunction<void(ZResourceContainer* th, ZRuntimeResourceID rid, SResourceReferenceFlags flags)>*
     ZResourceContainer_AddResourceReferenceInternal;
@@ -200,7 +200,7 @@ public:
     static EngineFunction<uint32(
         ZWorldInventory* th,
         const ZRepositoryID& repId,
-        ZDelegate<void(unsigned int, TEntityRef<IItemBase>)> callback,
+        ZDelegate<void(uint32_t, TEntityRef<IItemBase>)> callback,
         uint64_t entityID,
         bool bLoading,
         const ZEntityRef& rParentSpatial,
