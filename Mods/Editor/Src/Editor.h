@@ -268,6 +268,8 @@ private:
 
     static SMatrix QneTransformToMatrix(const QneTransform& p_Transform);
 
+    static std::string FormatFloat(float p_Value, bool p_Round, uint32_t p_Decimals);
+
     void DrawItems(bool p_HasFocus);
     void DrawActors(bool p_HasFocus);
     void DrawDebugChannels(bool p_HasFocus);
@@ -462,6 +464,8 @@ private:
     bool m_UseAngleSnap = false;
     bool m_UseScaleSnap = false;
     bool m_UseQneTransforms = false;
+    bool m_RoundCopiedMatrixValues = false;
+    int32_t m_CopyDecimalPlaces = 3;
     double m_SnapValue = 1.0;
     double m_AngleSnapValue = 90.0;
     double m_ScaleSnapValue = 1.0;

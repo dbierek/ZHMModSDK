@@ -104,6 +104,28 @@ void Editor::DrawEntityProperties() {
             SetSettingBool("general", "qne_transforms", m_UseQneTransforms);
         }
 
+        if (ImGui::Checkbox("Round Copied Matrix Values", &m_RoundCopiedMatrixValues)) {
+            SetSettingBool("general", "round_copied_matrix_values", m_RoundCopiedMatrixValues);
+        }
+
+        ImGui::BeginDisabled(!m_RoundCopiedMatrixValues);
+
+        ImGui::AlignTextToFramePadding();
+
+        ImGui::TextUnformatted("Decimal Places");
+
+        ImGui::SameLine();
+
+        ImGui::SetNextItemWidth(150.0f);
+
+        if (ImGui::SliderInt("##DecimalPlaces", &m_CopyDecimalPlaces, 0, 6)) {
+            SetSettingInt("general", "copy_decimal_places", m_CopyDecimalPlaces);
+        }
+
+        ImGui::EndDisabled();
+
+        ImGui::Separator();
+
         if (ImGui::Checkbox("##UseSnap", &m_UseSnap)) {
             SetSettingBool("general", "snap", m_UseSnap);
         }
