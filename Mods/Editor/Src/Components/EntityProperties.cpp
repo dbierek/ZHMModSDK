@@ -439,11 +439,34 @@ void Editor::DrawEntityProperties() {
             }
         }
 
+        auto s_InputPins = GetPins(s_SelectedEntity, false);
+
         ImGui::SameLine(0, 5);
 
-        if (ImGui::InputText(
-            "Input Pin", s_InputPinName, IM_ARRAYSIZE(s_InputPinName), ImGuiInputTextFlags_EnterReturnsTrue
-        )) {
+        Util::ImGuiUtils::InputWithAutocomplete(
+            "Input Pin##InputPinsPopup",
+            s_InputPinName,
+            sizeof(s_InputPinName),
+            s_InputPins,
+            [](const PinInfo& pin) -> std::string {
+                return pin.name;
+            },
+            [](const PinInfo& pin) -> std::string {
+                if (pin.description.empty()) {
+                    return pin.name;
+                }
+
+                return pin.name + " - " + pin.description;
+            },
+            [](const std::string&, const std::string&, const std::string& value) {
+                strcpy_s(s_InputPinName, value.c_str());
+            },
+            [](const PinInfo& pin) -> std::string {
+                return pin.name;
+            }
+        );
+
+        if (ImGui::IsItemActive() && ImGui::IsKeyPressed(ImGuiKey_Enter)) {
             ZObjectRef s_ObjectRef;
 
             if (m_InputPinData) {
@@ -551,11 +574,34 @@ void Editor::DrawEntityProperties() {
             }
         }
 
+        auto s_OutputPins = GetPins(s_SelectedEntity, true);
+
         ImGui::SameLine(0, 5);
 
-        if (ImGui::InputText(
-            "Output Pin", s_OutputPinName, IM_ARRAYSIZE(s_OutputPinName), ImGuiInputTextFlags_EnterReturnsTrue
-        )) {
+        Util::ImGuiUtils::InputWithAutocomplete(
+            "Output Pin##OutputPinsPopup",
+            s_OutputPinName,
+            sizeof(s_OutputPinName),
+            s_OutputPins,
+            [](const PinInfo& pin) -> std::string {
+                return pin.name;
+            },
+            [](const PinInfo& pin) -> std::string {
+                if (pin.description.empty()) {
+                    return pin.name;
+                }
+
+                return pin.name + " - " + pin.description;
+            },
+            [](const std::string&, const std::string&, const std::string& value) {
+                strcpy_s(s_OutputPinName, value.c_str());
+            },
+            [](const PinInfo& pin) -> std::string {
+                return pin.name;
+            }
+        );
+
+        if (ImGui::IsItemActive() && ImGui::IsKeyPressed(ImGuiKey_Enter)) {
             ZObjectRef s_ObjectRef;
 
             if (m_OutputPinData) {

@@ -81,6 +81,7 @@ public:
     static QneTransform MatrixToQneTransform(const SMatrix& p_Matrix);
 
     void QueueTask(std::function<void()> p_Task);
+
 private:
     struct DebugEntity {
         std::string m_TypeName;
@@ -94,6 +95,16 @@ private:
         ZResourcePtr m_PrimResourcePtr;
         SVector4 m_Color;
         SMatrix m_Transform;
+    };
+
+    struct PinInfo {
+        std::string name;
+        std::string description;
+    };
+
+    struct PinLists {
+        std::vector<PinInfo> inputPins;
+        std::vector<PinInfo> outputPins;
     };
 
     void SpawnCameras();
@@ -313,6 +324,10 @@ private:
     static bool IsActorTarget(ZActor* p_Actor);
 
     void ProcessTasks();
+
+    std::vector<PinInfo> GetPins(ZEntityRef p_EntityRef, bool outputPins);
+
+    std::map<std::string, PinLists> ParsePinsJson(const std::string& p_PinsJson);
 
 private:
     DECLARE_PLUGIN_DETOUR(Editor, bool, OnLoadScene, ZEntitySceneContext*, SSceneInitParameters&);
@@ -593,6 +608,7 @@ private:
     std::mutex m_TaskMutex;
     std::vector<std::function<void()>> m_TaskQueue;
 
+    std::map<std::string, PinLists> m_ClassToInputAndOutputPins;
     std::vector<std::pair<std::string, STypeID*>> m_PinDataTypes;
     STypeID* m_InputPinTypeID = nullptr;
     void* m_InputPinData = nullptr;
