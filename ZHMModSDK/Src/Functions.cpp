@@ -499,3 +499,31 @@ PATTERN_FUNCTION(
     ZHM5WeaponControl_GetCrosshairScale,
     float(ZHM5WeaponControl* th)
 );
+
+PATTERN_FUNCTION(
+    "\x48\x89\x5C\x24\x10\x48\x89\x6C\x24\x18\x57\x48\x83\xEC\x00\x48\x8B\xF9\x49\x8B\xE8\x48\x8B\x0A",
+    "xxxxxxxxxxxxxx?xxxxxxxxx",
+    ZGameKeywordManager_GetKeywords,
+    void(ZGameKeywordManager* th, const ZEntityRef& rHolder, const THashSet<int32_t, TDefaultHashSetPolicy<int32_t>>& outKeywords)
+);
+
+PATTERN_FUNCTION(
+    "\x48\x89\x5C\x24\x08\x57\x48\x83\xEC\x00\x48\x8B\x79\x28\x45\x8B\xD0",
+    "xxxxxxxxx?xxxxxxx",
+    ZGameKeywordManager_GetKeywordString,
+    ZString* (const ZGameKeywordManager* th, ZString& result, int32 nKeywordID)
+);
+
+PATTERN_FUNCTION(
+    "\x44\x89\x44\x24\x18\x55\x56\x57\x41\x54\x48\x8B\xEC",
+    "xxxxxxxxxxxxx",
+    ZGameKeywordManager_AddKeyword,
+    void(ZGameKeywordManager* th, const ZEntityRef& rHolder, int32_t nKeyword)
+);
+
+PATTERN_FUNCTION(
+    "\x44\x89\x44\x24\x18\x55\x53\x41\x56",
+    "xxxxxxxxx",
+    ZGameKeywordManager_RemoveKeyword,
+    void(ZGameKeywordManager* th, const ZEntityRef& rHolder, int32_t nKeyword)
+);

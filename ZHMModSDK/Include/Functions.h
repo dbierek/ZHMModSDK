@@ -53,6 +53,7 @@ class ZStashPointEntity;
 class ZTimeOfDayManager;
 class ZHM5Health;
 class ZHM5WeaponControl;
+class ZGameKeywordManager;
 
 namespace bfx {
     class AreaHandle;
@@ -254,4 +255,25 @@ public:
     )>* ZCharacterSubcontrollerInventory_GetAmmoInPocketForType;
 
     static EngineFunction<float(ZHM5WeaponControl* th)>* ZHM5WeaponControl_GetCrosshairScale;
+
+    static EngineFunction<void(
+        ZGameKeywordManager* th,
+        const ZEntityRef& rHolder,
+        const THashSet<int32_t, TDefaultHashSetPolicy<int32_t>>& outKeywords
+    )>* ZGameKeywordManager_GetKeywords;
+    static EngineFunction<ZString*(
+        const ZGameKeywordManager* th,
+        ZString& result,
+        int32 nKeywordID
+    )>* ZGameKeywordManager_GetKeywordString;
+    static EngineFunction<void(
+        ZGameKeywordManager* th,
+        const ZEntityRef& rHolder,
+        int32_t nKeyword
+    )>* ZGameKeywordManager_AddKeyword;
+    static EngineFunction<void(
+        ZGameKeywordManager* th,
+        const ZEntityRef& rHolder,
+        int32_t nKeyword
+    )>* ZGameKeywordManager_RemoveKeyword;
 };

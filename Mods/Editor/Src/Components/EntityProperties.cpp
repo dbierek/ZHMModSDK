@@ -687,6 +687,76 @@ void Editor::DrawEntityProperties() {
 
         ImGui::Separator();
 
+        if (ImGui::CollapsingHeader("Keywords")) {
+            static char s_KeywordString[2048] = {};
+
+            const float buttonWidth = ImGui::CalcTextSize(ICON_MD_ADD " Add Keyword").x + ImGui::GetStyle().FramePadding.x * 2.0f;
+
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - buttonWidth - ImGui::GetStyle().ItemSpacing.x);
+
+            ImGui::InputText("##Keyword", s_KeywordString, sizeof(s_KeywordString));
+
+            ImGui::SameLine();
+
+            if (ImGui::Button(ICON_MD_ADD " Add Keyword")) {
+                if (strlen(s_KeywordString) > 0) {
+                    const int32_t s_Keyword = Hash::Fnv1a(s_KeywordString);
+
+                    Functions::ZGameKeywordManager_AddKeyword->Call(
+                        Globals::GameKeywordManager,
+                        s_SelectedEntity,
+                        s_Keyword
+                    );
+
+                    s_KeywordString[0] = '\0';
+                }
+            }
+
+            ImGui::Separator();
+
+            THashSet<int32_t, TDefaultHashSetPolicy<int32_t>> s_Keywords;
+
+            Functions::ZGameKeywordManager_GetKeywords->Call(Globals::GameKeywordManager, s_SelectedEntity, s_Keywords);
+
+            for (const auto s_Keyword : s_Keywords) {
+                ZString s_KeywordString;
+
+                Functions::ZGameKeywordManager_GetKeywordString->Call(
+                    Globals::GameKeywordManager,
+                    s_KeywordString,
+                    s_Keyword
+                );
+
+                ImGui::Text(s_KeywordString.c_str());
+
+                ImGui::SameLine();
+
+                ImGui::PushID(s_Keyword);
+
+                if (ImGui::SmallButton(ICON_MD_CONTENT_COPY)) {
+                    CopyToClipboard(s_KeywordString.c_str());
+                }
+
+                ImGui::SameLine();
+
+                if (ImGui::SmallButton(ICON_MD_DELETE)) {
+                    Functions::ZGameKeywordManager_RemoveKeyword->Call(Globals::GameKeywordManager, s_SelectedEntity, s_Keyword);
+
+                    ImGui::PopID();
+
+                    break;
+                }
+
+                ImGui::PopID();
+
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("Remove");
+                }
+            }
+        }
+
+        ImGui::Separator();
+
         ZRenderMaterialInstance* s_RenderMaterialInstance = nullptr;
 
         if (s_ReferencedTemplateFactoryType == "MATT") {
