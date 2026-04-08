@@ -304,6 +304,25 @@ void Editor::OnEngineInitialized() {
             }
         }
     }
+
+    for (const auto& [s_TypeName, s_TypeID] : (*Globals::TypeRegistry)->m_types) {
+        if (s_TypeID->GetTypeInfo()->IsClass()) {
+            m_ClassNames.push_back(std::string(s_TypeName.c_str(), s_TypeName.size()));
+        }
+    }
+
+    std::sort(
+        m_ClassNames.begin(),
+        m_ClassNames.end(),
+        [](const std::string& a, const std::string& b) {
+            return std::lexicographical_compare(
+                a.begin(), a.end(),
+                b.begin(), b.end(),
+                [](char ac, char bc) {
+                    return std::tolower(ac) < std::tolower(bc);
+                });
+        }
+    );
 }
 
 bool Editor::ImGuiCopyWidget(const std::string& p_Id) {
